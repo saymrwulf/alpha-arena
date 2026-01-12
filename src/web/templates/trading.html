@@ -1,0 +1,330 @@
+{% extends "base.html" %}
+
+{% block title %}Trading Control{% endblock %}
+{% block page_title %}Trading Control{% endblock %}
+{% block page_subtitle %}Start, stop, and configure trading operations{% endblock %}
+
+{% block content %}
+<div x-data="tradingControl()">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Main Controls -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Trading Status Card -->
+            <div class="card">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h3 class="text-xl font-semibold">Trading Engine</h3>
+                        <p class="text-sm text-slate-400">Control the autonomous trading loop</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="text-sm text-slate-400">Status:</span>
+                        <span x-show="tradingActive" class="flex items-center gap-2 px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg">
+                            <span class="w-3 h-3 bg-emerald-400 rounded-full pulse-green"></span>
+                            Running
+                        </span>
+                        <span x-show="!tradingActive" class="flex items-center gap-2 px-4 py-2 bg-slate-700 text-slate-300 rounded-lg">
+                            <span class="w-3 h-3 bg-slate-400 rounded-full"></span>
+                            Stopped
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Control Buttons -->
+                <div class="flex items-center gap-4 mb-6">
+                    <button x-show="!tradingActive"
+                            @click="startTrading()"
+                            :disabled="loading"
+                            class="flex-1 btn btn-success py-4 text-lg">
+                        <svg class="w-6 h-6 mr-2 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Start Trading
+                    </button>
+                    <button x-show="tradingActive"
+                            @click="stopTrading()"
+                            :disabled="loading"
+                            class="flex-1 btn btn-danger py-4 text-lg">
+                        <svg class="w-6 h-6 mr-2 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                        </svg>
+                        Stop Trading
+                    </button>
+                </div>
+
+                <!-- Mode Selector -->
+                <div class="bg-slate-700/30 rounded-lg p-4">
+                    <label class="block text-sm font-medium text-slate-300 mb-3">Trading Mode</label>
+                    <div class="grid grid-cols-2 gap-4">
+                        <button @click="tradingMode = 'simulation'"
+                                :class="tradingMode === 'simulation' ? 'ring-2 ring-primary-500 bg-primary-500/20' : 'bg-slate-700'"
+                                class="p-4 rounded-lg text-left transition-all">
+                            <div class="font-medium">Simulation</div>
+                            <div class="text-xs text-slate-400 mt-1">Paper trading with no real money</div>
+                        </button>
+                        <button @click="tradingMode = 'live'"
+                                :class="tradingMode === 'live' ? 'ring-2 ring-red-500 bg-red-500/20' : 'bg-slate-700'"
+                                class="p-4 rounded-lg text-left transition-all">
+                            <div class="font-medium text-red-400">Live Trading</div>
+                            <div class="text-xs text-slate-400 mt-1">Real trades with actual funds</div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Configuration -->
+            <div class="card">
+                <h3 class="font-semibold mb-4">Trading Configuration</h3>
+                <div class="grid grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">Loop Interval (seconds)</label>
+                        <input type="number" x-model="loopInterval" min="10" max="300"
+                               class="input w-full">
+                        <p class="text-xs text-slate-500 mt-1">Time between analysis cycles</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">Max Iterations</label>
+                        <input type="number" x-model="maxIterations" min="1" placeholder="Unlimited"
+                               class="input w-full">
+                        <p class="text-xs text-slate-500 mt-1">Leave empty for unlimited</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">Min Confidence</label>
+                        <input type="number" x-model="minConfidence" min="0" max="1" step="0.05"
+                               class="input w-full">
+                        <p class="text-xs text-slate-500 mt-1">Minimum confidence to trade (0-1)</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">Min Edge</label>
+                        <input type="number" x-model="minEdge" min="0" max="0.5" step="0.01"
+                               class="input w-full">
+                        <p class="text-xs text-slate-500 mt-1">Minimum edge required (0-0.5)</p>
+                    </div>
+                </div>
+
+                <!-- Feature Toggles -->
+                <div class="mt-6 pt-6 border-t border-slate-700">
+                    <h4 class="text-sm font-medium text-slate-300 mb-4">Features</h4>
+                    <div class="grid grid-cols-2 gap-4">
+                        <label class="flex items-center gap-3 p-3 bg-slate-700/30 rounded-lg cursor-pointer">
+                            <input type="checkbox" x-model="enableAgents" class="rounded bg-slate-600 border-slate-500 text-primary-500 focus:ring-primary-500">
+                            <div>
+                                <div class="text-sm font-medium">Multi-Agent System</div>
+                                <div class="text-xs text-slate-400">Enable agent collaboration</div>
+                            </div>
+                        </label>
+                        <label class="flex items-center gap-3 p-3 bg-slate-700/30 rounded-lg cursor-pointer">
+                            <input type="checkbox" x-model="enableDebate" class="rounded bg-slate-600 border-slate-500 text-primary-500 focus:ring-primary-500">
+                            <div>
+                                <div class="text-sm font-medium">Agent Debate</div>
+                                <div class="text-xs text-slate-400">Agents debate decisions</div>
+                            </div>
+                        </label>
+                        <label class="flex items-center gap-3 p-3 bg-slate-700/30 rounded-lg cursor-pointer">
+                            <input type="checkbox" x-model="enableIndicators" class="rounded bg-slate-600 border-slate-500 text-primary-500 focus:ring-primary-500">
+                            <div>
+                                <div class="text-sm font-medium">Technical Indicators</div>
+                                <div class="text-xs text-slate-400">EMA, RSI, MACD analysis</div>
+                            </div>
+                        </label>
+                        <label class="flex items-center gap-3 p-3 bg-slate-700/30 rounded-lg cursor-pointer">
+                            <input type="checkbox" x-model="enableArbitrage" class="rounded bg-slate-600 border-slate-500 text-primary-500 focus:ring-primary-500">
+                            <div>
+                                <div class="text-sm font-medium">Arbitrage Detection</div>
+                                <div class="text-xs text-slate-400">Find arbitrage opportunities</div>
+                            </div>
+                        </label>
+                        <label class="flex items-center gap-3 p-3 bg-slate-700/30 rounded-lg cursor-pointer">
+                            <input type="checkbox" x-model="enableReflection" class="rounded bg-slate-600 border-slate-500 text-primary-500 focus:ring-primary-500">
+                            <div>
+                                <div class="text-sm font-medium">Reflection & Learning</div>
+                                <div class="text-xs text-slate-400">Learn from trade outcomes</div>
+                            </div>
+                        </label>
+                        <label class="flex items-center gap-3 p-3 bg-slate-700/30 rounded-lg cursor-pointer">
+                            <input type="checkbox" x-model="enableMemory" class="rounded bg-slate-600 border-slate-500 text-primary-500 focus:ring-primary-500">
+                            <div>
+                                <div class="text-sm font-medium">Memory System</div>
+                                <div class="text-xs text-slate-400">Persistent memory storage</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="mt-6 flex justify-end">
+                    <button @click="saveConfig()" class="btn btn-primary">
+                        Save Configuration
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="space-y-6">
+            <!-- Kill Switch -->
+            <div class="card" :class="killSwitch ? 'border-red-500' : ''">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-semibold">Kill Switch</h3>
+                    <span x-show="killSwitch" class="badge badge-danger">ACTIVE</span>
+                </div>
+                <p class="text-sm text-slate-400 mb-4">
+                    Emergency stop all trading activity. When active, no new trades will be executed.
+                </p>
+                <button @click="toggleKillSwitch()"
+                        class="w-full py-3 rounded-lg font-medium transition-all"
+                        :class="killSwitch ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-red-600 hover:bg-red-700 text-white'">
+                    <span x-text="killSwitch ? 'Deactivate Kill Switch' : 'Activate Kill Switch'"></span>
+                </button>
+            </div>
+
+            <!-- Current Cycle Info -->
+            <div class="card">
+                <h3 class="font-semibold mb-4">Current Cycle</h3>
+                <div class="space-y-3">
+                    <div class="flex justify-between">
+                        <span class="text-sm text-slate-400">Cycle #</span>
+                        <span class="font-medium" x-text="cycleCount"></span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-slate-400">Last Run</span>
+                        <span class="font-medium" x-text="lastCycleTime || 'N/A'"></span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-slate-400">Next Run</span>
+                        <span class="font-medium" x-text="nextCycleTime || 'N/A'"></span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-slate-400">Signals Found</span>
+                        <span class="font-medium" x-text="lastCycleSignals"></span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-slate-400">Trades Executed</span>
+                        <span class="font-medium" x-text="lastCycleTrades"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Provider Status -->
+            <div class="card">
+                <h3 class="font-semibold mb-4">Provider Status</h3>
+                <div class="space-y-2">
+                    <template x-for="(connected, provider) in providers" :key="provider">
+                        <div class="flex items-center justify-between py-2 px-3 bg-slate-700/30 rounded-lg">
+                            <span class="text-sm capitalize" x-text="provider"></span>
+                            <span class="badge" :class="connected ? 'badge-success' : 'badge-danger'" x-text="connected ? 'Connected' : 'Not Configured'"></span>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function tradingControl() {
+    return {
+        // State
+        tradingActive: false,
+        tradingMode: 'simulation',
+        killSwitch: false,
+        loading: false,
+
+        // Config
+        loopInterval: 60,
+        maxIterations: null,
+        minConfidence: 0.6,
+        minEdge: 0.05,
+        enableAgents: true,
+        enableDebate: true,
+        enableIndicators: true,
+        enableArbitrage: true,
+        enableReflection: true,
+        enableMemory: true,
+
+        // Cycle info
+        cycleCount: 0,
+        lastCycleTime: null,
+        nextCycleTime: null,
+        lastCycleSignals: 0,
+        lastCycleTrades: 0,
+
+        // Providers
+        providers: {},
+
+        async init() {
+            await this.fetchStatus();
+            await this.fetchProviders();
+        },
+
+        async fetchStatus() {
+            const resp = await fetch('/api/trading/status');
+            const data = await resp.json();
+            this.tradingActive = data.active;
+            this.tradingMode = data.mode;
+            this.cycleCount = data.cycle_count;
+            this.lastCycleTime = data.last_cycle ? new Date(data.last_cycle).toLocaleTimeString() : null;
+        },
+
+        async fetchProviders() {
+            const resp = await fetch('/api/system/providers');
+            this.providers = await resp.json();
+        },
+
+        async startTrading() {
+            this.loading = true;
+            try {
+                const resp = await fetch('/api/trading/start', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        mode: this.tradingMode,
+                        loop_interval: this.loopInterval,
+                        max_iterations: this.maxIterations,
+                        enable_agents: this.enableAgents,
+                        enable_indicators: this.enableIndicators,
+                        enable_arbitrage: this.enableArbitrage,
+                    })
+                });
+                if (resp.ok) {
+                    this.tradingActive = true;
+                }
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        async stopTrading() {
+            this.loading = true;
+            try {
+                const resp = await fetch('/api/trading/stop', {method: 'POST'});
+                if (resp.ok) {
+                    this.tradingActive = false;
+                }
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        async toggleKillSwitch() {
+            const formData = new FormData();
+            formData.append('enabled', !this.killSwitch);
+            const resp = await fetch('/api/trading/kill-switch', {
+                method: 'POST',
+                body: formData
+            });
+            if (resp.ok) {
+                this.killSwitch = !this.killSwitch;
+            }
+        },
+
+        async saveConfig() {
+            // Would save config via API
+            alert('Configuration saved!');
+        }
+    }
+}
+</script>
+{% endblock %}

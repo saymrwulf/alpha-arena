@@ -1,0 +1,276 @@
+{% extends "base.html" %}
+
+{% block title %}Risk Management{% endblock %}
+{% block page_title %}Risk Management{% endblock %}
+{% block page_subtitle %}Configure and monitor risk controls{% endblock %}
+
+{% block content %}
+<div x-data="riskPage()">
+    <!-- Risk Status Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="stat-card">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-sm text-slate-400">Daily Loss</span>
+                <span class="badge" :class="dailyLossPct > 80 ? 'badge-danger' : dailyLossPct > 50 ? 'badge-warning' : 'badge-success'"
+                      x-text="dailyLossPct.toFixed(0) + '% of limit'"></span>
+            </div>
+            <div class="text-2xl font-bold" :class="dailyPnl < 0 ? 'text-red-400' : 'text-emerald-400'"
+                 x-text="'$' + Math.abs(dailyPnl).toFixed(2)"></div>
+            <div class="mt-2 h-2 bg-slate-700 rounded-full overflow-hidden">
+                <div class="h-full transition-all" :class="dailyLossPct > 80 ? 'bg-red-500' : dailyLossPct > 50 ? 'bg-amber-500' : 'bg-emerald-500'"
+                     :style="`width: ${Math.min(dailyLossPct, 100)}%`"></div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="text-sm text-slate-400 mb-2">Total Exposure</div>
+            <div class="text-2xl font-bold text-blue-400" x-text="'$' + totalExposure.toFixed(2)"></div>
+            <div class="text-xs text-slate-500 mt-1" x-text="'Max: $' + maxExposure"></div>
+        </div>
+
+        <div class="stat-card">
+            <div class="text-sm text-slate-400 mb-2">Open Positions</div>
+            <div class="text-2xl font-bold text-purple-400" x-text="openPositions + '/' + maxPositions"></div>
+        </div>
+
+        <div class="stat-card" :class="killSwitch ? 'border-red-500' : ''">
+            <div class="text-sm text-slate-400 mb-2">Kill Switch</div>
+            <div class="text-2xl font-bold" :class="killSwitch ? 'text-red-400' : 'text-emerald-400'"
+                 x-text="killSwitch ? 'ACTIVE' : 'Off'"></div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Risk Settings -->
+        <div class="card">
+            <h3 class="font-semibold mb-4">Position Limits</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Max Position Size (USDC)</label>
+                    <input type="number" x-model="settings.maxPositionSize" min="1" class="input w-full">
+                    <p class="text-xs text-slate-500 mt-1">Maximum size for any single position</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Max Single Trade (USDC)</label>
+                    <input type="number" x-model="settings.maxSingleTrade" min="1" class="input w-full">
+                    <p class="text-xs text-slate-500 mt-1">Maximum size for a single trade</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Max Open Positions</label>
+                    <input type="number" x-model="settings.maxOpenPositions" min="1" max="20" class="input w-full">
+                    <p class="text-xs text-slate-500 mt-1">Maximum concurrent positions</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loss Limits -->
+        <div class="card">
+            <h3 class="font-semibold mb-4">Loss Limits</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Daily Loss Limit (USDC)</label>
+                    <input type="number" x-model="settings.dailyLossLimit" min="1" class="input w-full">
+                    <p class="text-xs text-slate-500 mt-1">Trading halts when this limit is reached</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Stop Loss (%)</label>
+                    <input type="number" x-model="settings.stopLossPct" min="1" max="50" step="1" class="input w-full">
+                    <p class="text-xs text-slate-500 mt-1">Default stop loss for positions</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Max Hold Time (hours)</label>
+                    <input type="number" x-model="settings.maxHoldHours" min="1" class="input w-full">
+                    <p class="text-xs text-slate-500 mt-1">Auto-close positions after this time</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kelly Criterion -->
+        <div class="card">
+            <h3 class="font-semibold mb-4">Kelly Criterion</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Kelly Fraction</label>
+                    <select x-model="settings.kellyFraction" class="input w-full">
+                        <option value="0.1">10% Kelly (Very Conservative)</option>
+                        <option value="0.25">25% Kelly (Conservative)</option>
+                        <option value="0.5">50% Kelly (Moderate)</option>
+                        <option value="1.0">100% Kelly (Aggressive)</option>
+                    </select>
+                    <p class="text-xs text-slate-500 mt-1">Fraction of optimal Kelly sizing</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Min Edge for Trade</label>
+                    <input type="number" x-model="settings.minEdge" min="0.01" max="0.5" step="0.01" class="input w-full">
+                    <p class="text-xs text-slate-500 mt-1">Minimum expected edge to place trade</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Min Confidence</label>
+                    <input type="number" x-model="settings.minConfidence" min="0.1" max="1.0" step="0.05" class="input w-full">
+                    <p class="text-xs text-slate-500 mt-1">Minimum confidence level (0-1)</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kill Switch -->
+        <div class="card">
+            <h3 class="font-semibold mb-4">Emergency Controls</h3>
+            <div class="space-y-4">
+                <div class="p-4 rounded-lg" :class="killSwitch ? 'bg-red-500/20 border border-red-500' : 'bg-slate-700/30'">
+                    <div class="flex items-center justify-between mb-3">
+                        <div>
+                            <div class="font-medium">Kill Switch</div>
+                            <div class="text-xs text-slate-400">Immediately halt all trading</div>
+                        </div>
+                        <button @click="toggleKillSwitch()"
+                                class="btn"
+                                :class="killSwitch ? 'btn-success' : 'btn-danger'">
+                            <span x-text="killSwitch ? 'Deactivate' : 'Activate'"></span>
+                        </button>
+                    </div>
+                    <p class="text-xs text-slate-400">
+                        When active, no new trades will be executed. Existing positions remain open.
+                    </p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Rate Limit (orders/minute)</label>
+                    <input type="number" x-model="settings.rateLimit" min="1" max="60" class="input w-full">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Save Button -->
+    <div class="mt-6 flex justify-end gap-4">
+        <button @click="resetDefaults()" class="btn btn-secondary">Reset to Defaults</button>
+        <button @click="saveSettings()" class="btn btn-primary">Save Risk Settings</button>
+    </div>
+
+    <!-- Active Alerts -->
+    <div class="card mt-6" x-show="alerts.length > 0">
+        <h3 class="font-semibold mb-4 text-amber-400">
+            <svg class="w-5 h-5 inline mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            Active Alerts
+        </h3>
+        <div class="space-y-2">
+            <template x-for="alert in alerts" :key="alert.id">
+                <div class="flex items-center justify-between p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                    <div>
+                        <div class="font-medium text-amber-400" x-text="alert.title"></div>
+                        <div class="text-sm text-slate-400" x-text="alert.message"></div>
+                    </div>
+                    <button @click="dismissAlert(alert.id)" class="text-slate-400 hover:text-white">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </template>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function riskPage() {
+    return {
+        // Status
+        dailyPnl: 0,
+        dailyLossPct: 0,
+        totalExposure: 0,
+        maxExposure: 500,
+        openPositions: 0,
+        maxPositions: 5,
+        killSwitch: false,
+        alerts: [],
+
+        // Settings
+        settings: {
+            maxPositionSize: 100,
+            maxSingleTrade: 25,
+            maxOpenPositions: 5,
+            dailyLossLimit: 50,
+            stopLossPct: 10,
+            maxHoldHours: 72,
+            kellyFraction: '0.25',
+            minEdge: 0.05,
+            minConfidence: 0.6,
+            rateLimit: 10,
+        },
+
+        async init() {
+            await this.fetchStatus();
+        },
+
+        async fetchStatus() {
+            try {
+                const resp = await fetch('/api/risk/status');
+                const data = await resp.json();
+                this.dailyPnl = data.daily_pnl;
+                this.dailyLossPct = data.daily_pnl_pct;
+                this.openPositions = data.open_positions;
+                this.maxPositions = data.max_positions;
+                this.totalExposure = data.total_exposure;
+                this.maxExposure = data.max_exposure;
+                this.killSwitch = data.kill_switch;
+                this.alerts = data.alerts || [];
+            } catch (e) {
+                console.error('Failed to fetch risk status');
+            }
+        },
+
+        async toggleKillSwitch() {
+            const formData = new FormData();
+            formData.append('enabled', !this.killSwitch);
+            const resp = await fetch('/api/trading/kill-switch', {
+                method: 'POST',
+                body: formData
+            });
+            if (resp.ok) {
+                this.killSwitch = !this.killSwitch;
+            }
+        },
+
+        async saveSettings() {
+            const resp = await fetch('/api/risk/settings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    max_position_size: parseFloat(this.settings.maxPositionSize),
+                    daily_loss_limit: parseFloat(this.settings.dailyLossLimit),
+                    max_open_positions: parseInt(this.settings.maxOpenPositions),
+                    max_single_trade: parseFloat(this.settings.maxSingleTrade),
+                    kill_switch: this.killSwitch,
+                })
+            });
+            if (resp.ok) {
+                alert('Risk settings saved!');
+            }
+        },
+
+        resetDefaults() {
+            this.settings = {
+                maxPositionSize: 100,
+                maxSingleTrade: 25,
+                maxOpenPositions: 5,
+                dailyLossLimit: 50,
+                stopLossPct: 10,
+                maxHoldHours: 72,
+                kellyFraction: '0.25',
+                minEdge: 0.05,
+                minConfidence: 0.6,
+                rateLimit: 10,
+            };
+        },
+
+        dismissAlert(id) {
+            this.alerts = this.alerts.filter(a => a.id !== id);
+        }
+    }
+}
+</script>
+{% endblock %}

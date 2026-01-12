@@ -1,0 +1,125 @@
+# Alpha Arena Configuration Example
+# Copy this file to config.yaml and fill in your values
+
+# Operating mode: live, paper, or backtest
+mode: paper
+
+# LLM Provider settings
+llm_providers:
+  anthropic:
+    enabled: true
+    models:
+      - claude-sonnet-4-20250514
+      - claude-3-5-haiku-20241022
+    default_model: claude-sonnet-4-20250514
+    api_key_env: ANTHROPIC_API_KEY
+  openai:
+    enabled: true
+    models:
+      - gpt-4o
+      - gpt-4o-mini
+      - o1-preview
+    default_model: gpt-4o
+    api_key_env: OPENAI_API_KEY
+  xai:
+    enabled: false
+    models:
+      - grok-3
+      - grok-3-mini
+    default_model: grok-3
+    api_key_env: XAI_API_KEY
+  google:
+    enabled: false
+    models:
+      - gemini-2.0-flash
+      - gemini-1.5-pro
+      - gemini-1.5-flash
+    default_model: gemini-2.0-flash
+    api_key_env: GOOGLE_API_KEY
+  local:
+    enabled: false
+    models:
+      - deepseek-r1:70b
+      - qwen2.5:72b
+      - llama3.3:70b
+      - kimi-k2
+    default_model: deepseek-r1:70b
+    base_url: "http://localhost:11434/v1"  # Ollama default, use :1234 for LM Studio
+
+# Risk management
+risk:
+  max_position_size_usdc: 100
+  max_single_trade_usdc: 25
+  max_portfolio_risk_pct: 20
+  max_open_positions: 5
+  max_correlation_exposure: 0.5
+  daily_loss_limit_usdc: 50
+  max_drawdown_pct: 15
+  max_orders_per_minute: 10
+  kelly_fraction: 0.25
+  min_edge_threshold: 0.03
+  min_confidence: 0.6
+  kill_switch: false
+
+# Agent configuration
+agents:
+  research_agent_model: claude-sonnet-4-20250514
+  risk_agent_model: claude-sonnet-4-20250514
+  execution_agent_model: gpt-4o
+  reflection_agent_model: claude-sonnet-4-20250514
+  sentiment_agent_model: grok-3
+  enable_multi_agent_debate: true
+  debate_rounds: 2
+  consensus_threshold: 0.7
+  enable_reflection: true
+  reflection_interval_trades: 10
+  loop_interval_seconds: 60
+  max_iterations: null
+
+# Memory system
+memory:
+  short_term_window: 50
+  working_memory_size: 20
+  long_term_capacity: 10000
+  enable_episodic_memory: true
+  enable_semantic_memory: true
+  enable_reflection_memory: true
+  embedding_model: text-embedding-3-small
+  similarity_threshold: 0.8
+
+# Data sources
+data:
+  polymarket_refresh_seconds: 30
+  orderbook_refresh_seconds: 5
+  sentiment_refresh_seconds: 120
+  news_refresh_seconds: 60
+  enable_kalshi: false
+  enable_predictit: false
+  enable_twitter: true
+  enable_news: true
+  enable_reddit: false
+
+# Technical indicators
+indicators:
+  ema_periods: [9, 21, 50]
+  rsi_period: 14
+  rsi_overbought: 70
+  rsi_oversold: 30
+  macd_fast: 12
+  macd_slow: 26
+  macd_signal: 9
+  volume_ma_period: 20
+  atr_period: 14
+
+# Market filters
+market_categories: []  # Empty = all categories
+min_liquidity_usdc: 5000
+min_volume_24h_usdc: 1000
+
+# Logging
+log_level: INFO
+log_dir: logs
+metrics_db: logs/metrics.db
+decisions_jsonl: logs/decisions.jsonl
+trades_jsonl: logs/trades.jsonl
+reflections_jsonl: logs/reflections.jsonl

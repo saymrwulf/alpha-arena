@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+
+{% block title %}Agents{% endblock %}
+{% block page_title %}Agent Monitoring{% endblock %}
+{% block page_subtitle %}Monitor and configure the multi-agent trading system{% endblock %}
+
+{% block content %}
+<div x-data="agentsPage()">
+    <!-- Agent Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+        <template x-for="agent in agents" :key="agent.name">
+            <div class="card">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-semibold capitalize" x-text="agent.name + ' Agent'"></h3>
+                    <div class="w-3 h-3 rounded-full"
+                         :class="agent.status === 'running' ? 'bg-emerald-400 pulse-green' : agent.status === 'idle' ? 'bg-slate-400' : 'bg-red-400'"></div>
+                </div>
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Status</span>
+                        <span class="capitalize" x-text="agent.status"></span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Model</span>
+                        <span class="text-xs font-mono" x-text="agent.model.split('-').slice(0,2).join('-')"></span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Last Run</span>
+                        <span x-text="agent.last_run || 'Never'"></span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Decisions</span>
+                        <span x-text="agent.decisions || 0"></span>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </div>
+
+    <!-- Agent Configuration -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <!-- Debate Settings -->
+        <div class="card">
+            <h3 class="font-semibold mb-4">Debate Protocol</h3>
+            <p class="text-sm text-slate-400 mb-4">
+                When enabled, agents debate before making trading decisions.
+            </p>
+            <div class="space-y-4">
+                <label class="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg cursor-pointer">
+                    <div>
+                        <div class="font-medium">Enable Debate</div>
+                        <div class="text-xs text-slate-400">Agents discuss before consensus</div>
+                    </div>
+                    <input type="checkbox" x-model="debateEnabled"
+                           class="rounded bg-slate-600 border-slate-500 text-primary-500 focus:ring-primary-500">
+                </label>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Debate Rounds</label>
+                    <input type="number" x-model="debateRounds" min="1" max="5"
+                           class="input w-full" :disabled="!debateEnabled">
+                </div>
+            </div>
+        </div>
+
+        <!-- Reflection Settings -->
+        <div class="card">
+            <h3 class="font-semibold mb-4">Reflection & Learning</h3>
+            <p class="text-sm text-slate-400 mb-4">
+                Enable the reflection agent to learn from trade outcomes.
+            </p>
+            <div class="space-y-4">
+                <label class="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg cursor-pointer">
+                    <div>
+                        <div class="font-medium">Enable Reflection</div>
+                        <div class="text-xs text-slate-400">Learn from completed trades</div>
+                    </div>
+                    <input type="checkbox" x-model="reflectionEnabled"
+                           class="rounded bg-slate-600 border-slate-500 text-primary-500 focus:ring-primary-500">
+                </label>
+                <label class="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg cursor-pointer">
+                    <div>
+                        <div class="font-medium">Memory System</div>
+                        <div class="text-xs text-slate-400">Persistent memory storage</div>
+                    </div>
+                    <input type="checkbox" x-model="memoryEnabled"
+                           class="rounded bg-slate-600 border-slate-500 text-primary-500 focus:ring-primary-500">
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Model Assignment -->
+    <div class="card mb-6">
+        <h3 class="font-semibold mb-4">Model Assignment</h3>
+        <p class="text-sm text-slate-400 mb-4">
+            Assign LLM models to each agent. Different models have different capabilities and costs.
+        </p>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <template x-for="agent in agents" :key="agent.name">
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2 capitalize" x-text="agent.name + ' Agent'"></label>
+                    <select class="input w-full" x-model="agent.model">
+                        <optgroup label="Anthropic">
+                            <option value="claude-opus-4-20250514">Claude Opus 4</option>
+                            <option value="claude-sonnet-4-20250514">Claude Sonnet 4</option>
+                            <option value="claude-haiku-3-5-20241022">Claude Haiku 3.5</option>
+                        </optgroup>
+                        <optgroup label="OpenAI">
+                            <option value="gpt-4o">GPT-4o</option>
+                            <option value="gpt-4o-mini">GPT-4o Mini</option>
+                            <option value="o1-preview">o1-preview</option>
+                        </optgroup>
+                        <optgroup label="xAI">
+                            <option value="grok-2-latest">Grok 2</option>
+                            <option value="grok-3-latest">Grok 3</option>
+                        </optgroup>
+                        <optgroup label="Local">
+                            <option value="deepseek-v3">DeepSeek v3</option>
+                            <option value="qwen2.5">Qwen 2.5</option>
+                            <option value="llama3.3">Llama 3.3</option>
+                        </optgroup>
+                    </select>
+                </div>
+            </template>
+        </div>
+        <div class="mt-4 flex justify-end">
+            <button @click="saveConfig()" class="btn btn-primary">Save Configuration</button>
+        </div>
+    </div>
+
+    <!-- Recent Agent Decisions -->
+    <div class="card">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold">Recent Agent Decisions</h3>
+            <button @click="fetchHistory()" class="btn btn-secondary text-sm">Refresh</button>
+        </div>
+        <div class="space-y-3">
+            <template x-for="decision in recentDecisions" :key="decision.id">
+                <div class="p-4 bg-slate-700/30 rounded-lg">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-3">
+                            <span class="px-2 py-1 bg-slate-600 rounded text-xs capitalize" x-text="decision.agent"></span>
+                            <span class="font-medium" x-text="decision.action"></span>
+                        </div>
+                        <span class="text-xs text-slate-400" x-text="decision.time"></span>
+                    </div>
+                    <p class="text-sm text-slate-400" x-text="decision.reasoning"></p>
+                    <div class="mt-2 flex gap-2">
+                        <span class="text-xs text-slate-500">Confidence: <span x-text="(decision.confidence * 100).toFixed(0) + '%'"></span></span>
+                        <span class="text-xs text-slate-500">Tokens: <span x-text="decision.tokens"></span></span>
+                    </div>
+                </div>
+            </template>
+            <div x-show="recentDecisions.length === 0" class="text-center py-8 text-slate-500">
+                No recent decisions
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function agentsPage() {
+    return {
+        agents: [
+            {name: 'research', status: 'idle', model: 'claude-sonnet-4-20250514', last_run: null, decisions: 0},
+            {name: 'risk', status: 'idle', model: 'claude-sonnet-4-20250514', last_run: null, decisions: 0},
+            {name: 'execution', status: 'idle', model: 'claude-haiku-3-5-20241022', last_run: null, decisions: 0},
+            {name: 'reflection', status: 'idle', model: 'claude-sonnet-4-20250514', last_run: null, decisions: 0},
+        ],
+        debateEnabled: true,
+        debateRounds: 2,
+        reflectionEnabled: true,
+        memoryEnabled: true,
+        recentDecisions: [],
+
+        async init() {
+            await this.fetchAgents();
+            await this.fetchHistory();
+        },
+
+        async fetchAgents() {
+            try {
+                const resp = await fetch('/api/agents');
+                const data = await resp.json();
+                if (data.agents) {
+                    this.agents = data.agents;
+                }
+                this.debateEnabled = data.debate_enabled;
+                this.reflectionEnabled = data.reflection_enabled;
+            } catch (e) {
+                console.error('Failed to fetch agents');
+            }
+        },
+
+        async fetchHistory() {
+            // Would fetch from /api/agents/history
+            this.recentDecisions = [];
+        },
+
+        async saveConfig() {
+            alert('Configuration saved!');
+        }
+    }
+}
+</script>
+{% endblock %}

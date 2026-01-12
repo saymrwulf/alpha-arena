@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+
+{% block title %}Markets{% endblock %}
+{% block page_title %}Markets{% endblock %}
+{% block page_subtitle %}Browse and analyze Polymarket prediction markets{% endblock %}
+
+{% block content %}
+<div x-data="marketsPage()">
+    <!-- Filters -->
+    <div class="card mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2">Search</label>
+                <input type="text" x-model="search" placeholder="Search markets..."
+                       @input.debounce.300ms="fetchMarkets()"
+                       class="input w-full">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2">Category</label>
+                <select x-model="category" @change="fetchMarkets()" class="input w-full">
+                    <option value="">All Categories</option>
+                    <option value="politics">Politics</option>
+                    <option value="crypto">Crypto</option>
+                    <option value="sports">Sports</option>
+                    <option value="entertainment">Entertainment</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2">Min Liquidity</label>
+                <input type="number" x-model="minLiquidity" min="0" step="1000"
+                       class="input w-full">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2">Sort By</label>
+                <select x-model="sortBy" @change="sortMarkets()" class="input w-full">
+                    <option value="volume">Volume</option>
+                    <option value="liquidity">Liquidity</option>
+                    <option value="end_date">End Date</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Markets Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <template x-for="market in markets" :key="market.id">
+            <div class="card hover:border-primary-500 transition-all cursor-pointer"
+                 @click="selectedMarket = market; showDetail = true">
+                <div class="mb-3">
+                    <span class="badge badge-info text-xs" x-text="market.category"></span>
+                </div>
+                <h4 class="font-medium mb-3 line-clamp-2" x-text="market.question"></h4>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div class="bg-emerald-500/10 rounded-lg p-3 text-center">
+                        <div class="text-xs text-slate-400 mb-1">YES</div>
+                        <div class="text-xl font-bold text-emerald-400" x-text="(market.yes_price * 100).toFixed(0) + '¢'"></div>
+                    </div>
+                    <div class="bg-red-500/10 rounded-lg p-3 text-center">
+                        <div class="text-xs text-slate-400 mb-1">NO</div>
+                        <div class="text-xl font-bold text-red-400" x-text="((1 - market.yes_price) * 100).toFixed(0) + '¢'"></div>
+                    </div>
+                </div>
+                <div class="flex justify-between text-xs text-slate-400">
+                    <span x-text="'Vol: $' + market.volume.toLocaleString()"></span>
+                    <span x-text="'Liq: $' + market.liquidity.toLocaleString()"></span>
+                </div>
+            </div>
+        </template>
+    </div>
+
+    <!-- Empty State -->
+    <div x-show="markets.length === 0 && !loading" class="card text-center py-16">
+        <svg class="w-16 h-16 mx-auto text-slate-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+        </svg>
+        <h3 class="text-xl font-semibold mb-2">No Markets Found</h3>
+        <p class="text-slate-400">Try adjusting your filters</p>
+    </div>
+
+    <!-- Loading State -->
+    <div x-show="loading" class="flex justify-center py-12">
+        <svg class="animate-spin h-8 w-8 text-primary-500" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+        </svg>
+    </div>
+
+    <!-- Market Detail Modal -->
+    <div x-show="showDetail" x-cloak
+         class="fixed inset-0 z-50 overflow-y-auto"
+         @click.self="showDetail = false">
+        <div class="flex min-h-screen items-center justify-center p-4">
+            <div class="fixed inset-0 bg-black/50 backdrop-blur-sm"></div>
+            <div class="relative bg-slate-800 rounded-xl w-full max-w-2xl p-6 border border-slate-700">
+                <button @click="showDetail = false" class="absolute right-4 top-4 text-slate-400 hover:text-white">
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+
+                <template x-if="selectedMarket">
+                    <div>
+                        <span class="badge badge-info mb-2" x-text="selectedMarket.category"></span>
+                        <h3 class="text-xl font-semibold mb-4" x-text="selectedMarket.question"></h3>
+
+                        <div class="grid grid-cols-2 gap-4 mb-6">
+                            <div class="bg-emerald-500/10 rounded-lg p-4 text-center">
+                                <div class="text-sm text-slate-400 mb-2">YES Price</div>
+                                <div class="text-3xl font-bold text-emerald-400" x-text="(selectedMarket.yes_price * 100).toFixed(1) + '¢'"></div>
+                            </div>
+                            <div class="bg-red-500/10 rounded-lg p-4 text-center">
+                                <div class="text-sm text-slate-400 mb-2">NO Price</div>
+                                <div class="text-3xl font-bold text-red-400" x-text="((1 - selectedMarket.yes_price) * 100).toFixed(1) + '¢'"></div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-4 mb-6">
+                            <div class="stat-card text-center">
+                                <div class="text-xs text-slate-400 mb-1">24h Volume</div>
+                                <div class="font-bold" x-text="'$' + selectedMarket.volume.toLocaleString()"></div>
+                            </div>
+                            <div class="stat-card text-center">
+                                <div class="text-xs text-slate-400 mb-1">Liquidity</div>
+                                <div class="font-bold" x-text="'$' + selectedMarket.liquidity.toLocaleString()"></div>
+                            </div>
+                            <div class="stat-card text-center">
+                                <div class="text-xs text-slate-400 mb-1">End Date</div>
+                                <div class="font-bold" x-text="selectedMarket.end_date"></div>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-3">
+                            <a :href="'https://polymarket.com/event/' + selectedMarket.slug" target="_blank"
+                               class="btn btn-secondary flex-1 text-center">
+                                View on Polymarket
+                            </a>
+                            <button class="btn btn-primary flex-1">
+                                Analyze
+                            </button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function marketsPage() {
+    return {
+        markets: [],
+        loading: false,
+        search: '',
+        category: '',
+        minLiquidity: 1000,
+        sortBy: 'volume',
+        showDetail: false,
+        selectedMarket: null,
+
+        async init() {
+            await this.fetchMarkets();
+        },
+
+        async fetchMarkets() {
+            this.loading = true;
+            try {
+                const params = new URLSearchParams({
+                    limit: 50,
+                    min_liquidity: this.minLiquidity,
+                });
+                if (this.category) params.append('category', this.category);
+
+                const resp = await fetch('/api/markets?' + params);
+                const data = await resp.json();
+                this.markets = data.markets || [];
+                this.sortMarkets();
+            } catch (e) {
+                console.error('Failed to fetch markets');
+                // Use mock data for demo
+                this.markets = [
+                    {id: '1', question: 'Will Bitcoin exceed $100,000 by end of 2024?', category: 'crypto', yes_price: 0.42, volume: 125000, liquidity: 45000, end_date: '2024-12-31', slug: 'btc-100k'},
+                    {id: '2', question: 'Will the next US President be a Democrat?', category: 'politics', yes_price: 0.48, volume: 890000, liquidity: 320000, end_date: '2024-11-05', slug: 'us-president'},
+                    {id: '3', question: 'Will Ethereum reach $5,000?', category: 'crypto', yes_price: 0.35, volume: 78000, liquidity: 28000, end_date: '2024-12-31', slug: 'eth-5k'},
+                ];
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        sortMarkets() {
+            this.markets.sort((a, b) => {
+                if (this.sortBy === 'volume') return b.volume - a.volume;
+                if (this.sortBy === 'liquidity') return b.liquidity - a.liquidity;
+                return new Date(a.end_date) - new Date(b.end_date);
+            });
+        }
+    }
+}
+</script>
+{% endblock %}

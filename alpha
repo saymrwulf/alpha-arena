@@ -1,0 +1,311 @@
+#!/bin/bash
+#
+# ALPHA ARENA - Master Control
+#
+# Simple commands:
+#   ./alpha start    Start in background
+#   ./alpha stop     Stop the service
+#   ./alpha status   Check if running
+#   ./alpha logs     Watch live logs
+#   ./alpha open     Open in browser
+#
+
+set -e
+
+# Configuration
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+APP_NAME="Alpha Arena"
+PID_FILE="$SCRIPT_DIR/.alpha.pid"
+LOG_FILE="$SCRIPT_DIR/data/logs/server.log"
+HOST="${ALPHA_HOST:-127.0.0.1}"
+PORT="${ALPHA_PORT:-8000}"
+URL="http://${HOST}:${PORT}"
+
+# Ensure log directory exists
+mkdir -p "$SCRIPT_DIR/data/logs"
+
+# ============================================================================
+# macOS Notifications
+# ============================================================================
+
+notify() {
+    local title="$1"
+    local message="$2"
+    local sound="${3:-default}"
+
+    osascript -e "display notification \"$message\" with title \"$title\" sound name \"$sound\"" 2>/dev/null || true
+}
+
+notify_success() {
+    notify "$APP_NAME" "$1" "Glass"
+}
+
+notify_error() {
+    notify "$APP_NAME" "❌ $1" "Basso"
+}
+
+notify_info() {
+    notify "$APP_NAME" "$1" "Pop"
+}
+
+# ============================================================================
+# Helper Functions
+# ============================================================================
+
+is_running() {
+    if [ -f "$PID_FILE" ]; then
+        local pid=$(cat "$PID_FILE")
+        if ps -p "$pid" > /dev/null 2>&1; then
+            return 0
+        fi
+    fi
+    return 1
+}
+
+get_pid() {
+    if [ -f "$PID_FILE" ]; then
+        cat "$PID_FILE"
+    fi
+}
+
+wait_for_server() {
+    local max_attempts=30
+    local attempt=0
+
+    while [ $attempt -lt $max_attempts ]; do
+        if curl -s "$URL/api/system/health" > /dev/null 2>&1; then
+            return 0
+        fi
+        sleep 1
+        ((attempt++))
+    done
+    return 1
+}
+
+ensure_setup() {
+    if [ ! -d ".venv" ]; then
+        echo "First-time setup..."
+        ./scripts/setup.sh
+    fi
+
+    if ! .venv/bin/python -c "import fastapi" 2>/dev/null; then
+        echo "Installing dependencies..."
+        ./scripts/setup.sh
+    fi
+}
+
+# ============================================================================
+# Commands
+# ============================================================================
+
+cmd_start() {
+    if is_running; then
+        local pid=$(get_pid)
+        echo "Already running (PID: $pid)"
+        echo "URL: $URL"
+        notify_info "Already running"
+        return 0
+    fi
+
+    echo "Starting $APP_NAME..."
+    ensure_setup
+
+    # Start in background
+    source .venv/bin/activate
+    nohup python -m uvicorn src.web.app:app \
+        --host "$HOST" \
+        --port "$PORT" \
+        >> "$LOG_FILE" 2>&1 &
+
+    local pid=$!
+    echo $pid > "$PID_FILE"
+
+    echo "Waiting for server..."
+    if wait_for_server; then
+        echo ""
+        echo "✓ Started successfully (PID: $pid)"
+        echo "  URL: $URL"
+        echo ""
+        echo "Commands:"
+        echo "  ./alpha logs    Watch logs"
+        echo "  ./alpha open    Open in browser"
+        echo "  ./alpha stop    Stop server"
+        notify_success "Started on $URL"
+    else
+        echo "Failed to start. Check logs:"
+        echo "  ./alpha logs"
+        notify_error "Failed to start"
+        rm -f "$PID_FILE"
+        return 1
+    fi
+}
+
+cmd_stop() {
+    if ! is_running; then
+        echo "Not running"
+        return 0
+    fi
+
+    local pid=$(get_pid)
+    echo "Stopping (PID: $pid)..."
+
+    kill "$pid" 2>/dev/null || true
+
+    # Wait for graceful shutdown
+    local attempts=0
+    while [ $attempts -lt 10 ]; do
+        if ! ps -p "$pid" > /dev/null 2>&1; then
+            break
+        fi
+        sleep 1
+        ((attempts++))
+    done
+
+    # Force kill if still running
+    if ps -p "$pid" > /dev/null 2>&1; then
+        kill -9 "$pid" 2>/dev/null || true
+    fi
+
+    rm -f "$PID_FILE"
+    echo "✓ Stopped"
+    notify_info "Stopped"
+}
+
+cmd_restart() {
+    cmd_stop
+    sleep 1
+    cmd_start
+}
+
+cmd_status() {
+    if is_running; then
+        local pid=$(get_pid)
+        echo "✓ Running"
+        echo "  PID: $pid"
+        echo "  URL: $URL"
+
+        # Check health
+        if curl -s "$URL/api/system/health" > /dev/null 2>&1; then
+            echo "  Health: OK"
+        else
+            echo "  Health: Not responding"
+        fi
+    else
+        echo "✗ Not running"
+        echo ""
+        echo "Start with: ./alpha start"
+    fi
+}
+
+cmd_logs() {
+    if [ ! -f "$LOG_FILE" ]; then
+        echo "No logs yet. Start the server first:"
+        echo "  ./alpha start"
+        return 1
+    fi
+
+    echo "Watching logs (Ctrl+C to exit)..."
+    echo "============================================"
+    tail -f "$LOG_FILE"
+}
+
+cmd_open() {
+    if ! is_running; then
+        echo "Server not running. Starting..."
+        cmd_start
+    fi
+
+    echo "Opening $URL..."
+    open "$URL" 2>/dev/null || xdg-open "$URL" 2>/dev/null || echo "Open in browser: $URL"
+}
+
+cmd_test() {
+    echo "Running tests..."
+    ensure_setup
+    source .venv/bin/activate
+    python -m pytest tests/ -v --tb=short
+
+    if [ $? -eq 0 ]; then
+        notify_success "All tests passed"
+    else
+        notify_error "Some tests failed"
+    fi
+}
+
+cmd_check() {
+    ./scripts/check.sh "$@"
+}
+
+cmd_help() {
+    echo ""
+    echo "ALPHA ARENA - Master Control"
+    echo ""
+    echo "Usage: ./alpha <command>"
+    echo ""
+    echo "Commands:"
+    echo "  start      Start server in background"
+    echo "  stop       Stop the server"
+    echo "  restart    Restart the server"
+    echo "  status     Show server status"
+    echo "  logs       Watch live logs"
+    echo "  open       Open web UI in browser"
+    echo "  test       Run all tests"
+    echo "  check      Run system check"
+    echo "  help       Show this help"
+    echo ""
+    echo "Environment variables:"
+    echo "  ALPHA_HOST   Host to bind (default: 127.0.0.1)"
+    echo "  ALPHA_PORT   Port to bind (default: 8000)"
+    echo ""
+    echo "Examples:"
+    echo "  ./alpha start              # Start on localhost:8000"
+    echo "  ALPHA_PORT=9000 ./alpha start  # Start on port 9000"
+    echo ""
+}
+
+# ============================================================================
+# Main
+# ============================================================================
+
+case "${1:-}" in
+    start)
+        cmd_start
+        ;;
+    stop)
+        cmd_stop
+        ;;
+    restart)
+        cmd_restart
+        ;;
+    status)
+        cmd_status
+        ;;
+    logs|log)
+        cmd_logs
+        ;;
+    open|web)
+        cmd_open
+        ;;
+    test|tests)
+        cmd_test
+        ;;
+    check)
+        shift
+        cmd_check "$@"
+        ;;
+    help|--help|-h)
+        cmd_help
+        ;;
+    "")
+        cmd_status
+        echo ""
+        cmd_help
+        ;;
+    *)
+        echo "Unknown command: $1"
+        cmd_help
+        exit 1
+        ;;
+esac

@@ -1,0 +1,298 @@
+{% extends "base.html" %}
+
+{% block title %}Help & Documentation{% endblock %}
+{% block page_title %}Help & Documentation{% endblock %}
+{% block page_subtitle %}Learn how to use the Alpha Arena Master Control{% endblock %}
+
+{% block content %}
+<div x-data="{activeSection: 'overview'}">
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <!-- Sidebar -->
+        <div class="lg:col-span-1">
+            <div class="card sticky top-24">
+                <h3 class="font-semibold mb-4">Contents</h3>
+                <nav class="space-y-1">
+                    <button @click="activeSection = 'overview'" :class="activeSection === 'overview' ? 'bg-primary-600/20 text-primary-400' : 'text-slate-400 hover:text-white'" class="w-full text-left px-3 py-2 rounded-lg text-sm">Overview</button>
+                    <button @click="activeSection = 'quickstart'" :class="activeSection === 'quickstart' ? 'bg-primary-600/20 text-primary-400' : 'text-slate-400 hover:text-white'" class="w-full text-left px-3 py-2 rounded-lg text-sm">Quick Start</button>
+                    <button @click="activeSection = 'dashboard'" :class="activeSection === 'dashboard' ? 'bg-primary-600/20 text-primary-400' : 'text-slate-400 hover:text-white'" class="w-full text-left px-3 py-2 rounded-lg text-sm">Dashboard</button>
+                    <button @click="activeSection = 'trading'" :class="activeSection === 'trading' ? 'bg-primary-600/20 text-primary-400' : 'text-slate-400 hover:text-white'" class="w-full text-left px-3 py-2 rounded-lg text-sm">Trading Control</button>
+                    <button @click="activeSection = 'agents'" :class="activeSection === 'agents' ? 'bg-primary-600/20 text-primary-400' : 'text-slate-400 hover:text-white'" class="w-full text-left px-3 py-2 rounded-lg text-sm">Multi-Agent System</button>
+                    <button @click="activeSection = 'wallet'" :class="activeSection === 'wallet' ? 'bg-primary-600/20 text-primary-400' : 'text-slate-400 hover:text-white'" class="w-full text-left px-3 py-2 rounded-lg text-sm">Wallet Analysis</button>
+                    <button @click="activeSection = 'risk'" :class="activeSection === 'risk' ? 'bg-primary-600/20 text-primary-400' : 'text-slate-400 hover:text-white'" class="w-full text-left px-3 py-2 rounded-lg text-sm">Risk Management</button>
+                    <button @click="activeSection = 'keyboard'" :class="activeSection === 'keyboard' ? 'bg-primary-600/20 text-primary-400' : 'text-slate-400 hover:text-white'" class="w-full text-left px-3 py-2 rounded-lg text-sm">Keyboard Shortcuts</button>
+                    <button @click="activeSection = 'troubleshooting'" :class="activeSection === 'troubleshooting' ? 'bg-primary-600/20 text-primary-400' : 'text-slate-400 hover:text-white'" class="w-full text-left px-3 py-2 rounded-lg text-sm">Troubleshooting</button>
+                </nav>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="lg:col-span-3 space-y-6">
+            <!-- Overview -->
+            <div x-show="activeSection === 'overview'" class="card">
+                <h2 class="text-2xl font-bold mb-4">Welcome to Alpha Arena</h2>
+                <p class="text-slate-300 mb-4">
+                    Alpha Arena Master Control is a comprehensive web-based control center for the Polymarket Trading Harness.
+                    It provides operators and supervisors with complete visibility and control over autonomous trading operations.
+                </p>
+
+                <h3 class="text-lg font-semibold mt-6 mb-3">Key Features</h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="p-4 bg-slate-700/30 rounded-lg">
+                        <div class="font-medium text-primary-400 mb-1">Multi-Agent Trading</div>
+                        <p class="text-sm text-slate-400">AI agents collaborate to research, assess risk, and execute trades</p>
+                    </div>
+                    <div class="p-4 bg-slate-700/30 rounded-lg">
+                        <div class="font-medium text-emerald-400 mb-1">Real-Time Monitoring</div>
+                        <p class="text-sm text-slate-400">WebSocket-powered live updates on positions and P&L</p>
+                    </div>
+                    <div class="p-4 bg-slate-700/30 rounded-lg">
+                        <div class="font-medium text-purple-400 mb-1">Wallet Analysis</div>
+                        <p class="text-sm text-slate-400">Analyze any Polymarket wallet's strategy and performance</p>
+                    </div>
+                    <div class="p-4 bg-slate-700/30 rounded-lg">
+                        <div class="font-medium text-amber-400 mb-1">Risk Controls</div>
+                        <p class="text-sm text-slate-400">Kelly Criterion sizing, position limits, and kill switch</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Start -->
+            <div x-show="activeSection === 'quickstart'" class="card">
+                <h2 class="text-2xl font-bold mb-4">Quick Start Guide</h2>
+
+                <div class="space-y-6">
+                    <div>
+                        <h3 class="text-lg font-semibold mb-2">1. Configure Your Environment</h3>
+                        <p class="text-slate-300 mb-2">Ensure your <code class="bg-slate-700 px-2 py-1 rounded">.env</code> file contains:</p>
+                        <pre class="bg-slate-900 p-4 rounded-lg text-sm overflow-x-auto">WALLET_PRIVATE_KEY=your_key
+POLYMARKET_API_KEY=your_key
+ANTHROPIC_API_KEY=your_key</pre>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-semibold mb-2">2. Start the Web Server</h3>
+                        <pre class="bg-slate-900 p-4 rounded-lg text-sm">python -m uvicorn src.web.app:app --reload --port 8000</pre>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-semibold mb-2">3. Access the Dashboard</h3>
+                        <p class="text-slate-300">Open <a href="http://localhost:8000" class="text-primary-400 hover:underline">http://localhost:8000</a> in your browser</p>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-semibold mb-2">4. Start Trading</h3>
+                        <ol class="list-decimal list-inside text-slate-300 space-y-2">
+                            <li>Review your configuration on the <a href="/config" class="text-primary-400 hover:underline">Config</a> page</li>
+                            <li>Set risk limits on the <a href="/risk" class="text-primary-400 hover:underline">Risk</a> page</li>
+                            <li>Start with Simulation mode first</li>
+                            <li>Click "Start Trading" in the header</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard -->
+            <div x-show="activeSection === 'dashboard'" class="card">
+                <h2 class="text-2xl font-bold mb-4">Dashboard Overview</h2>
+                <p class="text-slate-300 mb-4">
+                    The dashboard provides a real-time overview of your trading system.
+                </p>
+
+                <h3 class="text-lg font-semibold mt-6 mb-3">Key Metrics</h3>
+                <table class="w-full text-sm">
+                    <tbody class="divide-y divide-slate-700">
+                        <tr><td class="py-2 font-medium">Balance</td><td class="py-2 text-slate-400">Your current USDC balance</td></tr>
+                        <tr><td class="py-2 font-medium">Daily P&L</td><td class="py-2 text-slate-400">Profit/loss for today</td></tr>
+                        <tr><td class="py-2 font-medium">Open Positions</td><td class="py-2 text-slate-400">Current positions vs maximum allowed</td></tr>
+                        <tr><td class="py-2 font-medium">Trading Cycles</td><td class="py-2 text-slate-400">Number of analysis cycles completed</td></tr>
+                    </tbody>
+                </table>
+
+                <h3 class="text-lg font-semibold mt-6 mb-3">Status Indicators</h3>
+                <div class="space-y-2">
+                    <div class="flex items-center gap-3">
+                        <span class="badge badge-success">Active</span>
+                        <span class="text-slate-400">Trading engine is running</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="badge badge-warning">Stopped</span>
+                        <span class="text-slate-400">Trading engine is not running</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="badge badge-danger">KILL SWITCH</span>
+                        <span class="text-slate-400">Emergency stop is active</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Trading -->
+            <div x-show="activeSection === 'trading'" class="card">
+                <h2 class="text-2xl font-bold mb-4">Trading Control</h2>
+
+                <h3 class="text-lg font-semibold mb-3">Trading Modes</h3>
+                <div class="space-y-3 mb-6">
+                    <div class="p-4 bg-slate-700/30 rounded-lg">
+                        <div class="font-medium text-blue-400">Simulation Mode</div>
+                        <p class="text-sm text-slate-400">Paper trading with no real money. Use this to test strategies.</p>
+                    </div>
+                    <div class="p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
+                        <div class="font-medium text-red-400">Live Trading Mode</div>
+                        <p class="text-sm text-slate-400">Real trades with actual funds. Use with caution.</p>
+                    </div>
+                </div>
+
+                <h3 class="text-lg font-semibold mb-3">Features</h3>
+                <ul class="space-y-2 text-slate-300">
+                    <li class="flex items-start gap-2">
+                        <svg class="w-5 h-5 text-primary-400 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                        <span><strong>Multi-Agent System</strong> - Research, Risk, Execution, and Reflection agents</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <svg class="w-5 h-5 text-primary-400 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                        <span><strong>Agent Debate</strong> - Agents discuss before making decisions</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <svg class="w-5 h-5 text-primary-400 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                        <span><strong>Technical Indicators</strong> - EMA, RSI, MACD analysis</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <svg class="w-5 h-5 text-primary-400 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                        <span><strong>Arbitrage Detection</strong> - Find price discrepancies</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Agents -->
+            <div x-show="activeSection === 'agents'" class="card">
+                <h2 class="text-2xl font-bold mb-4">Multi-Agent System</h2>
+
+                <div class="space-y-4">
+                    <div class="p-4 bg-slate-700/30 rounded-lg">
+                        <div class="font-medium text-blue-400 mb-2">Research Agent</div>
+                        <p class="text-sm text-slate-300">Gathers market data, analyzes news, and generates probability estimates.</p>
+                        <p class="text-xs text-slate-500 mt-2">Recommended model: Claude Sonnet 4</p>
+                    </div>
+                    <div class="p-4 bg-slate-700/30 rounded-lg">
+                        <div class="font-medium text-purple-400 mb-2">Risk Agent</div>
+                        <p class="text-sm text-slate-300">Calculates Kelly sizing, assesses exposure, and enforces risk limits.</p>
+                        <p class="text-xs text-slate-500 mt-2">Recommended model: Claude Sonnet 4</p>
+                    </div>
+                    <div class="p-4 bg-slate-700/30 rounded-lg">
+                        <div class="font-medium text-emerald-400 mb-2">Execution Agent</div>
+                        <p class="text-sm text-slate-300">Determines optimal entry timing and manages order placement.</p>
+                        <p class="text-xs text-slate-500 mt-2">Recommended model: Claude Haiku 3.5 (fast)</p>
+                    </div>
+                    <div class="p-4 bg-slate-700/30 rounded-lg">
+                        <div class="font-medium text-amber-400 mb-2">Reflection Agent</div>
+                        <p class="text-sm text-slate-300">Analyzes completed trades and learns from outcomes.</p>
+                        <p class="text-xs text-slate-500 mt-2">Recommended model: Claude Sonnet 4</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Wallet Analysis -->
+            <div x-show="activeSection === 'wallet'" class="card">
+                <h2 class="text-2xl font-bold mb-4">Wallet Analysis</h2>
+                <p class="text-slate-300 mb-4">
+                    Analyze any Polymarket wallet to understand their trading strategy and performance.
+                </p>
+
+                <h3 class="text-lg font-semibold mb-3">What You Can Learn</h3>
+                <ul class="space-y-2 text-slate-300">
+                    <li>• <strong>Strategy Detection</strong> - Momentum, mean reversion, scalping, etc.</li>
+                    <li>• <strong>Risk Profile</strong> - Conservative, moderate, aggressive, or degen</li>
+                    <li>• <strong>Performance Metrics</strong> - Sharpe ratio, profit factor, win rate</li>
+                    <li>• <strong>Trading Patterns</strong> - Hold times, position sizes, entry preferences</li>
+                    <li>• <strong>Strengths & Weaknesses</strong> - What they do well and areas to improve</li>
+                </ul>
+
+                <h3 class="text-lg font-semibold mt-6 mb-3">Export Options</h3>
+                <p class="text-slate-400">Export analysis as JSON or open a full HTML report.</p>
+            </div>
+
+            <!-- Risk -->
+            <div x-show="activeSection === 'risk'" class="card">
+                <h2 class="text-2xl font-bold mb-4">Risk Management</h2>
+
+                <h3 class="text-lg font-semibold mb-3">Kelly Criterion</h3>
+                <p class="text-slate-300 mb-4">
+                    Position sizes are calculated using the Kelly Criterion: <code class="bg-slate-700 px-2 py-1 rounded">f* = (bp - q) / b</code>
+                </p>
+                <p class="text-slate-400 text-sm mb-4">
+                    We recommend using 25% Kelly (Quarter Kelly) for reduced volatility while still capturing most of the growth.
+                </p>
+
+                <h3 class="text-lg font-semibold mb-3">Risk Controls</h3>
+                <table class="w-full text-sm">
+                    <tbody class="divide-y divide-slate-700">
+                        <tr><td class="py-2 font-medium">Daily Loss Limit</td><td class="py-2 text-slate-400">Trading stops when this limit is hit</td></tr>
+                        <tr><td class="py-2 font-medium">Max Position Size</td><td class="py-2 text-slate-400">Maximum capital per position</td></tr>
+                        <tr><td class="py-2 font-medium">Max Open Positions</td><td class="py-2 text-slate-400">Limit concurrent positions</td></tr>
+                        <tr><td class="py-2 font-medium">Kill Switch</td><td class="py-2 text-slate-400">Emergency stop all trading</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Keyboard Shortcuts -->
+            <div x-show="activeSection === 'keyboard'" class="card">
+                <h2 class="text-2xl font-bold mb-4">Keyboard Shortcuts</h2>
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-slate-700">
+                            <th class="text-left py-2 text-slate-400">Shortcut</th>
+                            <th class="text-left py-2 text-slate-400">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-700">
+                        <tr><td class="py-2"><kbd class="bg-slate-700 px-2 py-1 rounded">G</kbd> <kbd class="bg-slate-700 px-2 py-1 rounded">D</kbd></td><td class="py-2 text-slate-300">Go to Dashboard</td></tr>
+                        <tr><td class="py-2"><kbd class="bg-slate-700 px-2 py-1 rounded">G</kbd> <kbd class="bg-slate-700 px-2 py-1 rounded">T</kbd></td><td class="py-2 text-slate-300">Go to Trading</td></tr>
+                        <tr><td class="py-2"><kbd class="bg-slate-700 px-2 py-1 rounded">G</kbd> <kbd class="bg-slate-700 px-2 py-1 rounded">P</kbd></td><td class="py-2 text-slate-300">Go to Positions</td></tr>
+                        <tr><td class="py-2"><kbd class="bg-slate-700 px-2 py-1 rounded">G</kbd> <kbd class="bg-slate-700 px-2 py-1 rounded">M</kbd></td><td class="py-2 text-slate-300">Go to Markets</td></tr>
+                        <tr><td class="py-2"><kbd class="bg-slate-700 px-2 py-1 rounded">G</kbd> <kbd class="bg-slate-700 px-2 py-1 rounded">W</kbd></td><td class="py-2 text-slate-300">Go to Wallet Analysis</td></tr>
+                        <tr><td class="py-2"><kbd class="bg-slate-700 px-2 py-1 rounded">K</kbd></td><td class="py-2 text-slate-300">Toggle Kill Switch</td></tr>
+                        <tr><td class="py-2"><kbd class="bg-slate-700 px-2 py-1 rounded">R</kbd></td><td class="py-2 text-slate-300">Refresh Data</td></tr>
+                        <tr><td class="py-2"><kbd class="bg-slate-700 px-2 py-1 rounded">?</kbd></td><td class="py-2 text-slate-300">Show Help</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Troubleshooting -->
+            <div x-show="activeSection === 'troubleshooting'" class="card">
+                <h2 class="text-2xl font-bold mb-4">Troubleshooting</h2>
+
+                <div class="space-y-6">
+                    <div>
+                        <h3 class="font-semibold text-red-400 mb-2">WebSocket Disconnected</h3>
+                        <p class="text-slate-300 mb-2">If the WebSocket shows "Disconnected":</p>
+                        <ul class="list-disc list-inside text-slate-400 text-sm">
+                            <li>Check that the server is running</li>
+                            <li>Refresh the page</li>
+                            <li>The connection will auto-reconnect after 3 seconds</li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3 class="font-semibold text-red-400 mb-2">Trading Won't Start</h3>
+                        <p class="text-slate-300 mb-2">Check the following:</p>
+                        <ul class="list-disc list-inside text-slate-400 text-sm">
+                            <li>API keys are configured in .env</li>
+                            <li>Kill switch is not active</li>
+                            <li>You have sufficient balance</li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3 class="font-semibold text-red-400 mb-2">Wallet Analysis Fails</h3>
+                        <p class="text-slate-300 mb-2">Possible causes:</p>
+                        <ul class="list-disc list-inside text-slate-400 text-sm">
+                            <li>Invalid wallet address</li>
+                            <li>Wallet has no trading history</li>
+                            <li>API rate limiting - try again later</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
