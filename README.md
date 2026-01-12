@@ -34,6 +34,21 @@ See **[QUICKSTART.md](QUICKSTART.md)** for the complete command reference.
 
 ## What You Get
 
+### Native macOS Menu Bar App
+Control Alpha Arena from your menu bar:
+- One-click server start/stop
+- Real-time P&L updates via WebSocket
+- Native notifications for trades and alerts
+- Quick access to dashboard and logs
+- Network mode toggle (localhost/LAN)
+
+```bash
+# Build and install
+cd macos-app && ./build.sh install
+```
+
+See **[docs/MACOS_APP_MANUAL.md](docs/MACOS_APP_MANUAL.md)** for full documentation.
+
 ### Web Control Center
 Real-time dashboard at localhost:8000 with:
 - Live P&L and positions
@@ -104,11 +119,14 @@ POLYMARKET_PASSPHRASE=...
 ## Architecture
 
 ```
-┌────────────────────────────────────────────────────────┐
-│              Web Application (FastAPI)                  │
-│         Dashboard | Trading | Markets | Logs            │
-└───────────────────────┬────────────────────────────────┘
-                        │
+┌──────────────────┐     ┌────────────────────────────────────────┐
+│  macOS Menu Bar  │     │       Web Application (FastAPI)        │
+│   (SwiftUI App)  │     │     Dashboard | Trading | Markets      │
+└────────┬─────────┘     └───────────────────┬────────────────────┘
+         │                                   │
+         └──────────────┬────────────────────┘
+                        │ REST API + WebSocket
+                        ▼
           ┌─────────────┼─────────────┐
           ▼             ▼             ▼
     ┌──────────┐  ┌──────────┐  ┌──────────┐
@@ -138,10 +156,14 @@ alpha-arena/
 ├── src/
 │   ├── web/              # Web application
 │   ├── broker/           # Market execution
-│   ├── agent/            # AI agents
+│   ├── agents/           # AI agents + debate system
+│   ├── signals/          # News, events, sentiment
 │   ├── risk/             # Risk management
-│   └── metrics/          # Logging
-├── tests/                # Test suite (170+ tests)
+│   └── llm/              # LLM provider abstraction
+├── macos-app/            # Native SwiftUI menu bar app
+│   ├── AlphaArena/       # Swift source files
+│   └── build.sh          # Build script
+├── tests/                # Test suite (200+ tests)
 ├── docs/                 # Detailed documentation
 ├── .venv/                # Isolated Python (auto-created)
 └── data/                 # Runtime data (auto-created)
@@ -154,6 +176,7 @@ alpha-arena/
 | Document | Purpose |
 |----------|---------|
 | **[QUICKSTART.md](QUICKSTART.md)** | Daily commands, quick reference |
+| **[docs/MACOS_APP_MANUAL.md](docs/MACOS_APP_MANUAL.md)** | Native macOS menu bar app |
 | **[docs/WEB_APP_MANUAL.md](docs/WEB_APP_MANUAL.md)** | Web interface guide |
 | **[docs/USER_MANUAL.md](docs/USER_MANUAL.md)** | Full CLI and API reference |
 | **[docs/TESTING.md](docs/TESTING.md)** | Testing guide |
