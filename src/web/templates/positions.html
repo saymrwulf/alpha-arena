@@ -1,0 +1,279 @@
+{% extends "base.html" %}
+
+{% block title %}Positions & Orders{% endblock %}
+{% block page_title %}Positions & Orders{% endblock %}
+{% block page_subtitle %}Manage your open positions and pending orders{% endblock %}
+
+{% block content %}
+<div x-data="positionsPage()">
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="stat-card">
+            <div class="text-sm text-slate-400 mb-1">Open Positions</div>
+            <div class="text-2xl font-bold text-blue-400" x-text="positions.length"></div>
+        </div>
+        <div class="stat-card">
+            <div class="text-sm text-slate-400 mb-1">Total Exposure</div>
+            <div class="text-2xl font-bold text-purple-400" x-text="'$' + totalExposure.toFixed(2)"></div>
+        </div>
+        <div class="stat-card">
+            <div class="text-sm text-slate-400 mb-1">Unrealized P&L</div>
+            <div class="text-2xl font-bold" :class="unrealizedPnl >= 0 ? 'text-emerald-400' : 'text-red-400'"
+                 x-text="(unrealizedPnl >= 0 ? '+$' : '-$') + Math.abs(unrealizedPnl).toFixed(2)"></div>
+        </div>
+        <div class="stat-card">
+            <div class="text-sm text-slate-400 mb-1">Pending Orders</div>
+            <div class="text-2xl font-bold text-amber-400" x-text="orders.length"></div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex gap-2 mb-6">
+        <button @click="activeTab = 'positions'"
+                :class="activeTab === 'positions' ? 'bg-primary-600 text-white' : 'bg-slate-700 text-slate-300'"
+                class="px-4 py-2 rounded-lg font-medium transition-all">
+            Positions
+        </button>
+        <button @click="activeTab = 'orders'"
+                :class="activeTab === 'orders' ? 'bg-primary-600 text-white' : 'bg-slate-700 text-slate-300'"
+                class="px-4 py-2 rounded-lg font-medium transition-all">
+            Open Orders
+        </button>
+        <button @click="activeTab = 'history'"
+                :class="activeTab === 'history' ? 'bg-primary-600 text-white' : 'bg-slate-700 text-slate-300'"
+                class="px-4 py-2 rounded-lg font-medium transition-all">
+            Trade History
+        </button>
+    </div>
+
+    <!-- Positions Table -->
+    <div x-show="activeTab === 'positions'" class="card">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold">Open Positions</h3>
+            <button @click="refreshData()" class="btn btn-secondary text-sm">
+                <svg class="w-4 h-4 mr-1 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Refresh
+            </button>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b border-slate-700">
+                        <th class="table-header pb-3">Market</th>
+                        <th class="table-header pb-3">Side</th>
+                        <th class="table-header pb-3">Size</th>
+                        <th class="table-header pb-3">Entry Price</th>
+                        <th class="table-header pb-3">Current Price</th>
+                        <th class="table-header pb-3">P&L</th>
+                        <th class="table-header pb-3">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-for="position in positions" :key="position.id">
+                        <tr class="border-b border-slate-700/50 hover:bg-slate-700/30">
+                            <td class="table-cell">
+                                <div class="font-medium" x-text="position.market.slice(0, 30) + '...'"></div>
+                                <div class="text-xs text-slate-500" x-text="position.market_id.slice(0, 12) + '...'"></div>
+                            </td>
+                            <td class="table-cell">
+                                <span class="badge" :class="position.side === 'YES' ? 'badge-success' : 'badge-danger'"
+                                      x-text="position.side"></span>
+                            </td>
+                            <td class="table-cell font-medium" x-text="position.size.toFixed(2)"></td>
+                            <td class="table-cell" x-text="'$' + position.entry_price.toFixed(4)"></td>
+                            <td class="table-cell" x-text="'$' + position.current_price.toFixed(4)"></td>
+                            <td class="table-cell font-medium" :class="position.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'"
+                                x-text="(position.pnl >= 0 ? '+$' : '-$') + Math.abs(position.pnl).toFixed(2)"></td>
+                            <td class="table-cell">
+                                <button @click="closePosition(position.id)" class="text-red-400 hover:text-red-300 text-sm">
+                                    Close
+                                </button>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+
+            <div x-show="positions.length === 0" class="text-center py-12 text-slate-500">
+                <svg class="w-12 h-12 mx-auto mb-3 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                </svg>
+                No open positions
+            </div>
+        </div>
+    </div>
+
+    <!-- Orders Table -->
+    <div x-show="activeTab === 'orders'" class="card">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold">Open Orders</h3>
+            <button @click="cancelAllOrders()" x-show="orders.length > 0" class="btn btn-danger text-sm">
+                Cancel All
+            </button>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b border-slate-700">
+                        <th class="table-header pb-3">Market</th>
+                        <th class="table-header pb-3">Type</th>
+                        <th class="table-header pb-3">Side</th>
+                        <th class="table-header pb-3">Size</th>
+                        <th class="table-header pb-3">Price</th>
+                        <th class="table-header pb-3">Status</th>
+                        <th class="table-header pb-3">Created</th>
+                        <th class="table-header pb-3">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-for="order in orders" :key="order.id">
+                        <tr class="border-b border-slate-700/50 hover:bg-slate-700/30">
+                            <td class="table-cell">
+                                <div class="font-medium" x-text="order.market.slice(0, 25) + '...'"></div>
+                            </td>
+                            <td class="table-cell">
+                                <span class="badge badge-info" x-text="order.type"></span>
+                            </td>
+                            <td class="table-cell">
+                                <span class="badge" :class="order.side === 'BUY' ? 'badge-success' : 'badge-danger'"
+                                      x-text="order.side"></span>
+                            </td>
+                            <td class="table-cell font-medium" x-text="order.size.toFixed(2)"></td>
+                            <td class="table-cell" x-text="'$' + order.price.toFixed(4)"></td>
+                            <td class="table-cell">
+                                <span class="badge badge-warning" x-text="order.status"></span>
+                            </td>
+                            <td class="table-cell text-slate-400" x-text="order.created"></td>
+                            <td class="table-cell">
+                                <button @click="cancelOrder(order.id)" class="text-red-400 hover:text-red-300 text-sm">
+                                    Cancel
+                                </button>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+
+            <div x-show="orders.length === 0" class="text-center py-12 text-slate-500">
+                No pending orders
+            </div>
+        </div>
+    </div>
+
+    <!-- Trade History -->
+    <div x-show="activeTab === 'history'" class="card">
+        <h3 class="font-semibold mb-4">Trade History</h3>
+
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b border-slate-700">
+                        <th class="table-header pb-3">Date</th>
+                        <th class="table-header pb-3">Market</th>
+                        <th class="table-header pb-3">Side</th>
+                        <th class="table-header pb-3">Size</th>
+                        <th class="table-header pb-3">Entry</th>
+                        <th class="table-header pb-3">Exit</th>
+                        <th class="table-header pb-3">P&L</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-for="trade in history" :key="trade.id">
+                        <tr class="border-b border-slate-700/50 hover:bg-slate-700/30">
+                            <td class="table-cell text-slate-400" x-text="trade.date"></td>
+                            <td class="table-cell font-medium" x-text="trade.market.slice(0, 25) + '...'"></td>
+                            <td class="table-cell">
+                                <span class="badge" :class="trade.side === 'YES' ? 'badge-success' : 'badge-danger'"
+                                      x-text="trade.side"></span>
+                            </td>
+                            <td class="table-cell" x-text="trade.size.toFixed(2)"></td>
+                            <td class="table-cell" x-text="'$' + trade.entry.toFixed(4)"></td>
+                            <td class="table-cell" x-text="'$' + trade.exit.toFixed(4)"></td>
+                            <td class="table-cell font-medium" :class="trade.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'"
+                                x-text="(trade.pnl >= 0 ? '+$' : '-$') + Math.abs(trade.pnl).toFixed(2)"></td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+
+            <div x-show="history.length === 0" class="text-center py-12 text-slate-500">
+                No trade history
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function positionsPage() {
+    return {
+        activeTab: 'positions',
+        positions: [],
+        orders: [],
+        history: [],
+        totalExposure: 0,
+        unrealizedPnl: 0,
+
+        async init() {
+            await this.refreshData();
+        },
+
+        async refreshData() {
+            // Fetch positions
+            try {
+                const posResp = await fetch('/api/positions');
+                const posData = await posResp.json();
+                this.positions = posData.positions || [];
+
+                this.totalExposure = this.positions.reduce((sum, p) => sum + p.size, 0);
+                this.unrealizedPnl = this.positions.reduce((sum, p) => sum + p.pnl, 0);
+            } catch (e) {
+                console.error('Failed to fetch positions');
+            }
+
+            // Fetch orders
+            try {
+                const ordResp = await fetch('/api/orders');
+                const ordData = await ordResp.json();
+                this.orders = ordData.orders || [];
+            } catch (e) {
+                console.error('Failed to fetch orders');
+            }
+
+            // Fetch history
+            try {
+                const histResp = await fetch('/api/logs/trades');
+                const histData = await histResp.json();
+                this.history = histData.trades || [];
+            } catch (e) {
+                console.error('Failed to fetch history');
+            }
+        },
+
+        async closePosition(id) {
+            if (!confirm('Are you sure you want to close this position?')) return;
+            await fetch(`/api/positions/${id}/close`, {method: 'POST'});
+            await this.refreshData();
+        },
+
+        async cancelOrder(id) {
+            await fetch(`/api/orders/${id}/cancel`, {method: 'POST'});
+            await this.refreshData();
+        },
+
+        async cancelAllOrders() {
+            if (!confirm('Cancel all pending orders?')) return;
+            for (const order of this.orders) {
+                await fetch(`/api/orders/${order.id}/cancel`, {method: 'POST'});
+            }
+            await this.refreshData();
+        }
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,312 @@
+{% extends "base.html" %}
+
+{% block title %}Wallet Analysis{% endblock %}
+{% block page_title %}Wallet Analysis{% endblock %}
+{% block page_subtitle %}Analyze Polymarket wallet strategies and performance{% endblock %}
+
+{% block content %}
+<div x-data="walletAnalysis()">
+    <!-- Search Bar -->
+    <div class="card mb-6">
+        <div class="flex items-center gap-4">
+            <div class="flex-1">
+                <label class="block text-sm font-medium text-slate-300 mb-2">Wallet Address</label>
+                <input type="text" x-model="address"
+                       placeholder="Enter Polygon wallet address (0x...)"
+                       @keyup.enter="analyzeWallet()"
+                       class="input w-full font-mono">
+            </div>
+            <div class="pt-6">
+                <button @click="analyzeWallet()" :disabled="loading || !address" class="btn btn-primary px-8">
+                    <svg x-show="loading" class="animate-spin -ml-1 mr-2 h-4 w-4 inline" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span x-text="loading ? 'Analyzing...' : 'Analyze'"></span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Sample Addresses -->
+        <div class="mt-4 pt-4 border-t border-slate-700">
+            <span class="text-xs text-slate-500 mr-2">Try sample:</span>
+            <button @click="address = '0x1234567890abcdef1234567890abcdef12345678'; analyzeWallet()"
+                    class="text-xs text-primary-400 hover:text-primary-300 mr-4">
+                Sample Wallet 1
+            </button>
+            <button @click="address = '0xabcdef1234567890abcdef1234567890abcdef12'; analyzeWallet()"
+                    class="text-xs text-primary-400 hover:text-primary-300">
+                Sample Wallet 2
+            </button>
+        </div>
+    </div>
+
+    <!-- Error Message -->
+    <div x-show="error" class="card bg-red-500/10 border-red-500 mb-6">
+        <div class="flex items-center gap-3">
+            <svg class="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span class="text-red-400" x-text="error"></span>
+        </div>
+    </div>
+
+    <!-- Results -->
+    <div x-show="result" x-cloak>
+        <!-- Quick Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="stat-card">
+                <div class="text-sm text-slate-400 mb-1">Total P&L</div>
+                <div class="text-2xl font-bold" :class="result?.summary?.total_pnl >= 0 ? 'text-emerald-400' : 'text-red-400'"
+                     x-text="result?.summary?.total_pnl >= 0 ? '+$' + result?.summary?.total_pnl?.toFixed(2) : '-$' + Math.abs(result?.summary?.total_pnl || 0).toFixed(2)"></div>
+            </div>
+            <div class="stat-card">
+                <div class="text-sm text-slate-400 mb-1">Win Rate</div>
+                <div class="text-2xl font-bold text-blue-400" x-text="(result?.summary?.win_rate || 0).toFixed(1) + '%'"></div>
+            </div>
+            <div class="stat-card">
+                <div class="text-sm text-slate-400 mb-1">Total Volume</div>
+                <div class="text-2xl font-bold text-purple-400" x-text="'$' + (result?.summary?.total_volume || 0).toLocaleString()"></div>
+            </div>
+            <div class="stat-card">
+                <div class="text-sm text-slate-400 mb-1">Markets Traded</div>
+                <div class="text-2xl font-bold text-amber-400" x-text="result?.summary?.unique_markets || 0"></div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Strategy Profile -->
+            <div class="card">
+                <h3 class="font-semibold mb-4">Strategy Profile</h3>
+                <div class="mb-4">
+                    <span class="px-3 py-1.5 bg-primary-500/20 text-primary-400 rounded-lg font-medium"
+                          x-text="result?.strategy?.primary?.toUpperCase()"></span>
+                    <span class="ml-2 px-3 py-1.5 rounded-lg font-medium"
+                          :class="{
+                              'bg-emerald-500/20 text-emerald-400': result?.strategy?.risk_profile === 'conservative',
+                              'bg-amber-500/20 text-amber-400': result?.strategy?.risk_profile === 'moderate',
+                              'bg-orange-500/20 text-orange-400': result?.strategy?.risk_profile === 'aggressive',
+                              'bg-red-500/20 text-red-400': result?.strategy?.risk_profile === 'degen'
+                          }"
+                          x-text="result?.strategy?.risk_profile?.toUpperCase()"></span>
+                </div>
+                <div class="mb-4">
+                    <div class="text-xs text-slate-400 mb-2">Confidence</div>
+                    <div class="h-2 bg-slate-700 rounded-full overflow-hidden">
+                        <div class="h-full bg-primary-500 rounded-full"
+                             :style="`width: ${(result?.strategy?.confidence || 0) * 100}%`"></div>
+                    </div>
+                    <div class="text-xs text-slate-500 mt-1" x-text="((result?.strategy?.confidence || 0) * 100).toFixed(0) + '% confidence'"></div>
+                </div>
+                <p class="text-sm text-slate-400" x-text="result?.strategy?.summary"></p>
+
+                <!-- Secondary Strategies -->
+                <template x-if="result?.strategy?.secondary?.length > 0">
+                    <div class="mt-4 pt-4 border-t border-slate-700">
+                        <div class="text-xs text-slate-400 mb-2">Secondary Strategies</div>
+                        <div class="flex flex-wrap gap-2">
+                            <template x-for="strat in result?.strategy?.secondary" :key="strat">
+                                <span class="px-2 py-1 bg-slate-700 text-slate-300 rounded text-xs" x-text="strat"></span>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Risk Metrics -->
+            <div class="card">
+                <h3 class="font-semibold mb-4">Risk Metrics</h3>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center py-2 border-b border-slate-700">
+                        <span class="text-sm text-slate-400">Sharpe Ratio</span>
+                        <span class="font-medium" :class="(result?.metrics?.sharpe_ratio || 0) > 1 ? 'text-emerald-400' : 'text-slate-300'"
+                              x-text="(result?.metrics?.sharpe_ratio || 0).toFixed(2)"></span>
+                    </div>
+                    <div class="flex justify-between items-center py-2 border-b border-slate-700">
+                        <span class="text-sm text-slate-400">Sortino Ratio</span>
+                        <span class="font-medium" x-text="(result?.metrics?.sortino_ratio || 0).toFixed(2)"></span>
+                    </div>
+                    <div class="flex justify-between items-center py-2 border-b border-slate-700">
+                        <span class="text-sm text-slate-400">Max Drawdown</span>
+                        <span class="font-medium text-red-400" x-text="'-$' + (result?.metrics?.max_drawdown || 0).toFixed(2)"></span>
+                    </div>
+                    <div class="flex justify-between items-center py-2 border-b border-slate-700">
+                        <span class="text-sm text-slate-400">Profit Factor</span>
+                        <span class="font-medium" x-text="(result?.metrics?.profit_factor || 0).toFixed(2)"></span>
+                    </div>
+                    <div class="flex justify-between items-center py-2">
+                        <span class="text-sm text-slate-400">Expectancy</span>
+                        <span class="font-medium" :class="(result?.metrics?.expectancy || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'"
+                              x-text="'$' + (result?.metrics?.expectancy || 0).toFixed(2) + '/trade'"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detected Patterns -->
+            <div class="card">
+                <h3 class="font-semibold mb-4">Detected Patterns</h3>
+                <div class="space-y-3 max-h-64 overflow-y-auto">
+                    <template x-for="pattern in result?.patterns" :key="pattern.type">
+                        <div class="p-3 bg-slate-700/30 rounded-lg">
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="font-medium text-sm" x-text="pattern.type.toUpperCase()"></span>
+                                <span class="text-xs text-slate-400" x-text="(pattern.confidence * 100).toFixed(0) + '%'"></span>
+                            </div>
+                            <p class="text-xs text-slate-400" x-text="pattern.description"></p>
+                        </div>
+                    </template>
+                    <div x-show="!result?.patterns?.length" class="text-sm text-slate-500 text-center py-4">
+                        No patterns detected
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Strengths, Weaknesses, Recommendations -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+            <!-- Strengths -->
+            <div class="card">
+                <h3 class="font-semibold mb-4 text-emerald-400">
+                    <svg class="w-5 h-5 inline mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Strengths
+                </h3>
+                <ul class="space-y-2">
+                    <template x-for="strength in result?.strengths" :key="strength">
+                        <li class="flex items-start gap-2 text-sm text-slate-300">
+                            <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full mt-2 flex-shrink-0"></span>
+                            <span x-text="strength"></span>
+                        </li>
+                    </template>
+                    <li x-show="!result?.strengths?.length" class="text-sm text-slate-500">No strengths identified</li>
+                </ul>
+            </div>
+
+            <!-- Weaknesses -->
+            <div class="card">
+                <h3 class="font-semibold mb-4 text-red-400">
+                    <svg class="w-5 h-5 inline mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    Areas for Improvement
+                </h3>
+                <ul class="space-y-2">
+                    <template x-for="weakness in result?.weaknesses" :key="weakness">
+                        <li class="flex items-start gap-2 text-sm text-slate-300">
+                            <span class="w-1.5 h-1.5 bg-red-400 rounded-full mt-2 flex-shrink-0"></span>
+                            <span x-text="weakness"></span>
+                        </li>
+                    </template>
+                    <li x-show="!result?.weaknesses?.length" class="text-sm text-slate-500">No weaknesses identified</li>
+                </ul>
+            </div>
+
+            <!-- Recommendations -->
+            <div class="card">
+                <h3 class="font-semibold mb-4 text-blue-400">
+                    <svg class="w-5 h-5 inline mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                    Recommendations
+                </h3>
+                <ul class="space-y-2">
+                    <template x-for="(rec, index) in result?.recommendations" :key="index">
+                        <li class="flex items-start gap-2 text-sm text-slate-300">
+                            <span class="w-5 h-5 bg-blue-500/20 text-blue-400 rounded-full flex items-center justify-center flex-shrink-0 text-xs" x-text="index + 1"></span>
+                            <span x-text="rec"></span>
+                        </li>
+                    </template>
+                    <li x-show="!result?.recommendations?.length" class="text-sm text-slate-500">No recommendations</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Export Options -->
+        <div class="card mt-6">
+            <div class="flex items-center justify-between">
+                <h3 class="font-semibold">Export Report</h3>
+                <div class="flex gap-3">
+                    <button @click="exportJson()" class="btn btn-secondary text-sm">
+                        <svg class="w-4 h-4 mr-2 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        JSON
+                    </button>
+                    <button @click="openHtmlReport()" class="btn btn-secondary text-sm">
+                        <svg class="w-4 h-4 mr-2 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                        Open Full Report
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Empty State -->
+    <div x-show="!result && !loading && !error" class="card text-center py-16">
+        <svg class="w-16 h-16 mx-auto text-slate-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <h3 class="text-xl font-semibold mb-2">Analyze Any Wallet</h3>
+        <p class="text-slate-400 max-w-md mx-auto">
+            Enter a Polymarket wallet address to analyze trading history, detect strategies, and view performance metrics.
+        </p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function walletAnalysis() {
+    return {
+        address: '',
+        loading: false,
+        error: null,
+        result: null,
+
+        async analyzeWallet() {
+            if (!this.address) return;
+
+            this.loading = true;
+            this.error = null;
+            this.result = null;
+
+            try {
+                const resp = await fetch('/api/wallet/analyze', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({address: this.address})
+                });
+
+                const data = await resp.json();
+
+                if (data.success) {
+                    this.result = data.data;
+                } else {
+                    this.error = data.error || 'Analysis failed';
+                }
+            } catch (e) {
+                this.error = 'Failed to connect to server';
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        exportJson() {
+            const blob = new Blob([JSON.stringify(this.result, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `wallet-analysis-${this.address.slice(0, 10)}.json`;
+            a.click();
+        },
+
+        openHtmlReport() {
+            window.open(`/api/wallet/${this.address}/html`, '_blank');
+        }
+    }
+}
+</script>
+{% endblock %}

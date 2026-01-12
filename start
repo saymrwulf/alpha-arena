@@ -1,0 +1,178 @@
+#!/bin/bash
+#
+# ============================================================================
+#   ALPHA ARENA - QUICK START
+# ============================================================================
+#
+# ONE COMMAND TO RULE THEM ALL
+#
+# This script handles everything:
+#   1. Checks if setup is needed
+#   2. Runs setup if necessary
+#   3. Starts the web application
+#
+# JUST RUN:
+#   ./start
+#
+# OPTIONS:
+#   ./start --check    Just check system status
+#   ./start --test     Run tests instead of starting
+#   ./start --help     Show help
+#
+# ============================================================================
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+BOLD='\033[1m'
+NC='\033[0m'
+
+print_banner() {
+    echo ""
+    echo -e "${BLUE}${BOLD}"
+    echo "    ╔═══════════════════════════════════════════╗"
+    echo "    ║                                           ║"
+    echo "    ║      ALPHA ARENA - MASTER CONTROL         ║"
+    echo "    ║                                           ║"
+    echo "    ║   Polymarket Autonomous Trading System    ║"
+    echo "    ║                                           ║"
+    echo "    ╚═══════════════════════════════════════════╝"
+    echo -e "${NC}"
+}
+
+print_help() {
+    echo "Usage: ./start [command]"
+    echo ""
+    echo "Commands:"
+    echo "  (none)      Start the web application"
+    echo "  --check     Check system status"
+    echo "  --test      Run all tests"
+    echo "  --setup     Force re-run setup"
+    echo "  --help      Show this help"
+    echo ""
+    echo "Environment:"
+    echo "  PORT=8000   Change port (default: 8000)"
+    echo "  HOST=127.0.0.1  Change host (default: 127.0.0.1)"
+    echo ""
+    echo "Examples:"
+    echo "  ./start                    # Start web app on localhost:8000"
+    echo "  PORT=9000 ./start          # Start on port 9000"
+    echo "  ./start --test             # Run tests"
+    echo "  ./start --check            # Check system"
+    echo ""
+}
+
+needs_setup() {
+    # Check if setup is needed
+    if [ ! -d ".venv" ]; then
+        return 0  # true, needs setup
+    fi
+    if [ ! -f ".venv/bin/python" ]; then
+        return 0
+    fi
+    if ! .venv/bin/python -c "import fastapi" 2>/dev/null; then
+        return 0
+    fi
+    return 1  # false, setup complete
+}
+
+run_setup() {
+    echo -e "${YELLOW}Setting up environment...${NC}"
+    echo ""
+    if [ -f "scripts/setup.sh" ]; then
+        ./scripts/setup.sh
+    else
+        echo -e "${RED}ERROR: scripts/setup.sh not found${NC}"
+        exit 1
+    fi
+}
+
+check_env_file() {
+    if [ ! -f ".env" ]; then
+        echo -e "${YELLOW}WARNING: .env file not found${NC}"
+        echo ""
+        echo "The application will run but you won't be able to:"
+        echo "  - Connect to LLM providers (Claude, GPT, etc.)"
+        echo "  - Trade on Polymarket"
+        echo ""
+        echo "To configure, edit .env with your API keys."
+        echo ""
+        read -p "Continue anyway? [y/N] " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            exit 1
+        fi
+    fi
+}
+
+start_web() {
+    local host="${HOST:-127.0.0.1}"
+    local port="${PORT:-8000}"
+
+    echo -e "${GREEN}Starting Alpha Arena Master Control...${NC}"
+    echo ""
+    echo -e "  ${BOLD}URL:${NC} http://${host}:${port}"
+    echo ""
+    echo -e "  Press ${BOLD}Ctrl+C${NC} to stop"
+    echo ""
+    echo "============================================"
+    echo ""
+
+    source .venv/bin/activate
+    exec python -m uvicorn src.web.app:app --host "$host" --port "$port" --reload
+}
+
+# Main
+print_banner
+
+case "${1:-}" in
+    --help|-h)
+        print_help
+        exit 0
+        ;;
+    --check)
+        if [ -f "scripts/check.sh" ]; then
+            exec ./scripts/check.sh
+        else
+            echo -e "${RED}ERROR: scripts/check.sh not found${NC}"
+            exit 1
+        fi
+        ;;
+    --test)
+        if [ -f "scripts/test.sh" ]; then
+            exec ./scripts/test.sh
+        else
+            echo -e "${RED}ERROR: scripts/test.sh not found${NC}"
+            exit 1
+        fi
+        ;;
+    --setup)
+        run_setup
+        exit 0
+        ;;
+    "")
+        # Default: start web app
+        if needs_setup; then
+            echo -e "${YELLOW}First-time setup detected...${NC}"
+            echo ""
+            run_setup
+            echo ""
+        fi
+
+        check_env_file
+        start_web
+        ;;
+    *)
+        echo -e "${RED}Unknown command: $1${NC}"
+        echo ""
+        print_help
+        exit 1
+        ;;
+esac

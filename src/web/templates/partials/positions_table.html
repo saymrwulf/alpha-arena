@@ -1,0 +1,24 @@
+<table class="w-full">
+    <thead>
+        <tr class="border-b border-slate-700">
+            <th class="table-header pb-3">Market</th>
+            <th class="table-header pb-3">Side</th>
+            <th class="table-header pb-3">Size</th>
+            <th class="table-header pb-3">P&L</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for position in positions %}
+        <tr class="border-b border-slate-700/50">
+            <td class="table-cell">{{ position.market[:30] }}...</td>
+            <td class="table-cell">{{ position.side }}</td>
+            <td class="table-cell">${{ position.size }}</td>
+            <td class="table-cell {% if position.pnl >= 0 %}text-emerald-400{% else %}text-red-400{% endif %}">${{ position.pnl }}</td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="4" class="text-center py-8 text-slate-500">No open positions</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>

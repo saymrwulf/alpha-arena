@@ -1,0 +1,553 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		AA000001 /* AlphaArenaApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100001; };
+		AA000002 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100002; };
+		AA000003 /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100003; };
+		AA000004 /* StatusItemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100004; };
+		AA000005 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100005; };
+		AA000006 /* PreferencesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100006; };
+		AA000007 /* AlphaArenaService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100007; };
+		AA000008 /* ProcessController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100008; };
+		AA000009 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100009; };
+		AA000010 /* WebSocketClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100010; };
+		AA000011 /* ServerState.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100011; };
+		AA000012 /* TradingStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100012; };
+		AA000013 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100013; };
+		AA000014 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100014; };
+		AA000015 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA100015; };
+		AA000016 /* PreferencesWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100017; };
+		AAT00001 /* ModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAT10001; };
+		AAT00002 /* ServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAT10002; };
+		AAT00003 /* ViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAT10003; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		AAT20001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AA700001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AA500001;
+			remoteInfo = AlphaArena;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		AA100001 /* AlphaArenaApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlphaArenaApp.swift; sourceTree = "<group>"; };
+		AA100002 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		AA100003 /* MenuBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarView.swift; sourceTree = "<group>"; };
+		AA100004 /* StatusItemView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusItemView.swift; sourceTree = "<group>"; };
+		AA100005 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		AA100006 /* PreferencesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesView.swift; sourceTree = "<group>"; };
+		AA100007 /* AlphaArenaService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlphaArenaService.swift; sourceTree = "<group>"; };
+		AA100008 /* ProcessController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessController.swift; sourceTree = "<group>"; };
+		AA100009 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
+		AA100010 /* WebSocketClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSocketClient.swift; sourceTree = "<group>"; };
+		AA100011 /* ServerState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerState.swift; sourceTree = "<group>"; };
+		AA100012 /* TradingStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TradingStatus.swift; sourceTree = "<group>"; };
+		AA100013 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
+		AA100014 /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
+		AA100015 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		AA100016 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		AA100017 /* PreferencesWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesWindowController.swift; sourceTree = "<group>"; };
+		AA200001 /* AlphaArena.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AlphaArena.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AAT10001 /* ModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelTests.swift; sourceTree = "<group>"; };
+		AAT10002 /* ServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceTests.swift; sourceTree = "<group>"; };
+		AAT10003 /* ViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewTests.swift; sourceTree = "<group>"; };
+		AAT20002 /* AlphaArenaTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AlphaArenaTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		AA300001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AAT30001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		AA400001 = {
+			isa = PBXGroup;
+			children = (
+				AA400002 /* AlphaArena */,
+				AAT40001 /* AlphaArenaTests */,
+				AA400003 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		AA400002 /* AlphaArena */ = {
+			isa = PBXGroup;
+			children = (
+				AA100001 /* AlphaArenaApp.swift */,
+				AA100002 /* AppDelegate.swift */,
+				AA100017 /* PreferencesWindowController.swift */,
+				AA400004 /* Views */,
+				AA400005 /* Services */,
+				AA400006 /* Models */,
+				AA400007 /* Notifications */,
+				AA400008 /* Resources */,
+			);
+			path = AlphaArena;
+			sourceTree = "<group>";
+		};
+		AA400003 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				AA200001 /* AlphaArena.app */,
+				AAT20002 /* AlphaArenaTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		AA400004 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				AA100003 /* MenuBarView.swift */,
+				AA100004 /* StatusItemView.swift */,
+				AA100005 /* DashboardView.swift */,
+				AA100006 /* PreferencesView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		AA400005 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				AA100007 /* AlphaArenaService.swift */,
+				AA100008 /* ProcessController.swift */,
+				AA100009 /* APIClient.swift */,
+				AA100010 /* WebSocketClient.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		AA400006 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				AA100011 /* ServerState.swift */,
+				AA100012 /* TradingStatus.swift */,
+				AA100013 /* AppSettings.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		AA400007 /* Notifications */ = {
+			isa = PBXGroup;
+			children = (
+				AA100014 /* NotificationManager.swift */,
+			);
+			path = Notifications;
+			sourceTree = "<group>";
+		};
+		AA400008 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				AA100015 /* Assets.xcassets */,
+				AA100016 /* Info.plist */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		AAT40001 /* AlphaArenaTests */ = {
+			isa = PBXGroup;
+			children = (
+				AAT10001 /* ModelTests.swift */,
+				AAT10002 /* ServiceTests.swift */,
+				AAT10003 /* ViewTests.swift */,
+			);
+			path = AlphaArenaTests;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		AA500001 /* AlphaArena */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA600001 /* Build configuration list for PBXNativeTarget "AlphaArena" */;
+			buildPhases = (
+				AA500002 /* Sources */,
+				AA300001 /* Frameworks */,
+				AA500003 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = AlphaArena;
+			productName = AlphaArena;
+			productReference = AA200001 /* AlphaArena.app */;
+			productType = "com.apple.product-type.application";
+		};
+		AAT50001 /* AlphaArenaTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AAT60001 /* Build configuration list for PBXNativeTarget "AlphaArenaTests" */;
+			buildPhases = (
+				AAT50002 /* Sources */,
+				AAT30001 /* Frameworks */,
+				AAT50003 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				AAT50004 /* PBXTargetDependency */,
+			);
+			name = AlphaArenaTests;
+			productName = AlphaArenaTests;
+			productReference = AAT20002 /* AlphaArenaTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		AA700001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					AA500001 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+					AAT50001 = {
+						CreatedOnToolsVersion = 15.0;
+						TestTargetID = AA500001;
+					};
+				};
+			};
+			buildConfigurationList = AA600002 /* Build configuration list for PBXProject "AlphaArena" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = AA400001;
+			productRefGroup = AA400003 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				AA500001 /* AlphaArena */,
+				AAT50001 /* AlphaArenaTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		AA500003 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA000015 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AAT50003 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		AA500002 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA000001 /* AlphaArenaApp.swift in Sources */,
+				AA000002 /* AppDelegate.swift in Sources */,
+				AA000003 /* MenuBarView.swift in Sources */,
+				AA000004 /* StatusItemView.swift in Sources */,
+				AA000005 /* DashboardView.swift in Sources */,
+				AA000006 /* PreferencesView.swift in Sources */,
+				AA000007 /* AlphaArenaService.swift in Sources */,
+				AA000008 /* ProcessController.swift in Sources */,
+				AA000009 /* APIClient.swift in Sources */,
+				AA000010 /* WebSocketClient.swift in Sources */,
+				AA000011 /* ServerState.swift in Sources */,
+				AA000012 /* TradingStatus.swift in Sources */,
+				AA000013 /* AppSettings.swift in Sources */,
+				AA000014 /* NotificationManager.swift in Sources */,
+				AA000016 /* PreferencesWindowController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AAT50002 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AAT00001 /* ModelTests.swift in Sources */,
+				AAT00002 /* ServiceTests.swift in Sources */,
+				AAT00003 /* ViewTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		AAT50004 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AA500001 /* AlphaArena */;
+			targetProxy = AAT20001 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		AA800001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		AA800002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		AA800003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = AlphaArena/Resources/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2024 Alpha Arena. All rights reserved.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.alpha-arena.controller";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		AA800004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = AlphaArena/Resources/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2024 Alpha Arena. All rights reserved.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.alpha-arena.controller";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		AAT80001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.alpha-arena.AlphaArenaTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AlphaArena.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/AlphaArena";
+			};
+			name = Debug;
+		};
+		AAT80002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.alpha-arena.AlphaArenaTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AlphaArena.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/AlphaArena";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		AA600001 /* Build configuration list for PBXNativeTarget "AlphaArena" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA800003 /* Debug */,
+				AA800004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AA600002 /* Build configuration list for PBXProject "AlphaArena" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA800001 /* Debug */,
+				AA800002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AAT60001 /* Build configuration list for PBXNativeTarget "AlphaArenaTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AAT80001 /* Debug */,
+				AAT80002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = AA700001 /* Project object */;
+}

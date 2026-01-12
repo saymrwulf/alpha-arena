@@ -1,0 +1,354 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block page_subtitle %}Real-time trading overview and system status{% endblock %}
+
+{% block content %}
+<div x-data="dashboardState()">
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <!-- Balance -->
+        <div class="stat-card">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-sm text-slate-400">Balance</span>
+                <svg class="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <div class="text-2xl font-bold text-emerald-400" x-text="'$' + balance"></div>
+            <div class="text-xs text-slate-500 mt-1">Available USDC</div>
+        </div>
+
+        <!-- Daily P&L -->
+        <div class="stat-card">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-sm text-slate-400">Daily P&L</span>
+                <svg class="w-5 h-5" :class="dailyPnl >= 0 ? 'text-emerald-400' : 'text-red-400'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
+            </div>
+            <div class="text-2xl font-bold" :class="dailyPnl >= 0 ? 'text-emerald-400' : 'text-red-400'" x-text="(dailyPnl >= 0 ? '+$' : '-$') + Math.abs(dailyPnl).toFixed(2)"></div>
+            <div class="text-xs text-slate-500 mt-1">Today's profit/loss</div>
+        </div>
+
+        <!-- Open Positions -->
+        <div class="stat-card">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-sm text-slate-400">Open Positions</span>
+                <svg class="w-5 h-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+            </div>
+            <div class="text-2xl font-bold text-blue-400" x-text="openPositions + '/' + maxPositions"></div>
+            <div class="text-xs text-slate-500 mt-1">Current / Maximum</div>
+        </div>
+
+        <!-- Cycles -->
+        <div class="stat-card">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-sm text-slate-400">Trading Cycles</span>
+                <svg class="w-5 h-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+            </div>
+            <div class="text-2xl font-bold text-purple-400" x-text="cycleCount"></div>
+            <div class="text-xs text-slate-500 mt-1">Completed today</div>
+        </div>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left Column: Chart & Activity -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Equity Curve Chart -->
+            <div class="card">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-semibold">Equity Curve</h3>
+                    <div class="flex gap-2">
+                        <button class="text-xs px-3 py-1 rounded bg-slate-700 text-slate-300 hover:bg-slate-600">1D</button>
+                        <button class="text-xs px-3 py-1 rounded bg-primary-600 text-white">7D</button>
+                        <button class="text-xs px-3 py-1 rounded bg-slate-700 text-slate-300 hover:bg-slate-600">30D</button>
+                        <button class="text-xs px-3 py-1 rounded bg-slate-700 text-slate-300 hover:bg-slate-600">ALL</button>
+                    </div>
+                </div>
+                <div class="h-64">
+                    <canvas id="equityChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="card">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-semibold">Recent Activity</h3>
+                    <a href="/logs" class="text-sm text-primary-400 hover:text-primary-300">View all</a>
+                </div>
+                <div class="space-y-3" id="activity-feed">
+                    <template x-for="activity in recentActivity" :key="activity.id">
+                        <div class="flex items-center gap-4 p-3 bg-slate-700/30 rounded-lg">
+                            <div class="w-10 h-10 rounded-full flex items-center justify-center"
+                                 :class="activity.type === 'trade' ? 'bg-emerald-500/20 text-emerald-400' : activity.type === 'signal' ? 'bg-blue-500/20 text-blue-400' : 'bg-amber-500/20 text-amber-400'">
+                                <svg x-show="activity.type === 'trade'" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                                </svg>
+                                <svg x-show="activity.type === 'signal'" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                </svg>
+                                <svg x-show="activity.type === 'alert'" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                            </div>
+                            <div class="flex-1">
+                                <div class="font-medium text-sm" x-text="activity.title"></div>
+                                <div class="text-xs text-slate-400" x-text="activity.description"></div>
+                            </div>
+                            <div class="text-xs text-slate-500" x-text="activity.time"></div>
+                        </div>
+                    </template>
+                    <div x-show="recentActivity.length === 0" class="text-center py-8 text-slate-500">
+                        No recent activity
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Status & Quick Actions -->
+        <div class="space-y-6">
+            <!-- System Status -->
+            <div class="card">
+                <h3 class="font-semibold mb-4">System Status</h3>
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between py-2 border-b border-slate-700">
+                        <span class="text-sm text-slate-400">Trading Engine</span>
+                        <span class="badge" :class="tradingActive ? 'badge-success' : 'badge-warning'" x-text="tradingActive ? 'Running' : 'Stopped'"></span>
+                    </div>
+                    <div class="flex items-center justify-between py-2 border-b border-slate-700">
+                        <span class="text-sm text-slate-400">Mode</span>
+                        <span class="badge" :class="tradingMode === 'live' ? 'badge-danger' : 'badge-info'" x-text="tradingMode === 'live' ? 'LIVE' : 'Simulation'"></span>
+                    </div>
+                    <div class="flex items-center justify-between py-2 border-b border-slate-700">
+                        <span class="text-sm text-slate-400">Kill Switch</span>
+                        <span class="badge" :class="killSwitch ? 'badge-danger' : 'badge-success'" x-text="killSwitch ? 'ACTIVE' : 'Off'"></span>
+                    </div>
+                    <div class="flex items-center justify-between py-2 border-b border-slate-700">
+                        <span class="text-sm text-slate-400">WebSocket</span>
+                        <span class="badge" :class="wsConnected ? 'badge-success' : 'badge-danger'" x-text="wsConnected ? 'Connected' : 'Disconnected'"></span>
+                    </div>
+                    <div class="flex items-center justify-between py-2">
+                        <span class="text-sm text-slate-400">Last Update</span>
+                        <span class="text-sm text-slate-300" x-text="lastUpdate"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Risk Overview -->
+            <div class="card">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-semibold">Risk Overview</h3>
+                    <a href="/risk" class="text-sm text-primary-400 hover:text-primary-300">Manage</a>
+                </div>
+                <div class="space-y-4">
+                    <!-- Daily Loss Progress -->
+                    <div>
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-sm text-slate-400">Daily Loss Limit</span>
+                            <span class="text-sm" :class="dailyLossPct > 80 ? 'text-red-400' : dailyLossPct > 50 ? 'text-amber-400' : 'text-emerald-400'" x-text="dailyLossPct.toFixed(0) + '%'"></span>
+                        </div>
+                        <div class="h-2 bg-slate-700 rounded-full overflow-hidden">
+                            <div class="h-full rounded-full transition-all"
+                                 :class="dailyLossPct > 80 ? 'bg-red-500' : dailyLossPct > 50 ? 'bg-amber-500' : 'bg-emerald-500'"
+                                 :style="`width: ${Math.min(dailyLossPct, 100)}%`"></div>
+                        </div>
+                        <div class="text-xs text-slate-500 mt-1" x-text="'$' + Math.abs(dailyPnl).toFixed(2) + ' / $' + dailyLimit"></div>
+                    </div>
+
+                    <!-- Position Utilization -->
+                    <div>
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-sm text-slate-400">Position Capacity</span>
+                            <span class="text-sm text-blue-400" x-text="Math.round(openPositions / maxPositions * 100) + '%'"></span>
+                        </div>
+                        <div class="h-2 bg-slate-700 rounded-full overflow-hidden">
+                            <div class="h-full bg-blue-500 rounded-full transition-all"
+                                 :style="`width: ${(openPositions / maxPositions) * 100}%`"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Agent Status -->
+            <div class="card">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-semibold">Agent Status</h3>
+                    <a href="/agents" class="text-sm text-primary-400 hover:text-primary-300">View all</a>
+                </div>
+                <div class="space-y-2">
+                    <template x-for="agent in agents" :key="agent.name">
+                        <div class="flex items-center justify-between py-2 px-3 bg-slate-700/30 rounded-lg">
+                            <div class="flex items-center gap-2">
+                                <div class="w-2 h-2 rounded-full"
+                                     :class="agent.status === 'running' ? 'bg-emerald-400' : agent.status === 'idle' ? 'bg-slate-400' : 'bg-red-400'"></div>
+                                <span class="text-sm capitalize" x-text="agent.name"></span>
+                            </div>
+                            <span class="text-xs text-slate-400" x-text="agent.status"></span>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card">
+                <h3 class="font-semibold mb-4">Quick Actions</h3>
+                <div class="grid grid-cols-2 gap-2">
+                    <a href="/wallet-analysis" class="btn btn-secondary text-center text-sm">
+                        Analyze Wallet
+                    </a>
+                    <a href="/markets" class="btn btn-secondary text-center text-sm">
+                        Browse Markets
+                    </a>
+                    <button @click="refreshData()" class="btn btn-secondary text-sm">
+                        Refresh Data
+                    </button>
+                    <a href="/config" class="btn btn-secondary text-center text-sm">
+                        Settings
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function dashboardState() {
+    return {
+        // Stats
+        balance: '0.00',
+        dailyPnl: 0,
+        totalPnl: 0,
+        openPositions: 0,
+        maxPositions: 5,
+        cycleCount: 0,
+
+        // Risk
+        dailyLimit: 50,
+        dailyLossPct: 0,
+
+        // Status
+        tradingActive: false,
+        tradingMode: 'simulation',
+        killSwitch: false,
+        wsConnected: false,
+        lastUpdate: 'Never',
+
+        // Data
+        agents: [
+            {name: 'research', status: 'idle'},
+            {name: 'risk', status: 'idle'},
+            {name: 'execution', status: 'idle'},
+            {name: 'reflection', status: 'idle'},
+        ],
+        recentActivity: [],
+
+        // Chart
+        chart: null,
+
+        async init() {
+            await this.fetchData();
+            this.initChart();
+
+            // Refresh every 30 seconds
+            setInterval(() => this.fetchData(), 30000);
+        },
+
+        async fetchData() {
+            try {
+                // Fetch trading status
+                const statusResp = await fetch('/api/trading/status');
+                const status = await statusResp.json();
+                this.tradingActive = status.active;
+                this.tradingMode = status.mode;
+                this.balance = status.balance;
+                this.dailyPnl = parseFloat(status.daily_pnl);
+                this.cycleCount = status.cycle_count;
+
+                // Fetch risk status
+                const riskResp = await fetch('/api/risk/status');
+                const risk = await riskResp.json();
+                this.dailyLimit = risk.daily_limit;
+                this.dailyLossPct = risk.daily_pnl_pct;
+                this.openPositions = risk.open_positions;
+                this.maxPositions = risk.max_positions;
+                this.killSwitch = risk.kill_switch;
+
+                // Fetch agents
+                const agentsResp = await fetch('/api/agents');
+                const agentsData = await agentsResp.json();
+                this.agents = agentsData.agents;
+
+                this.lastUpdate = new Date().toLocaleTimeString();
+            } catch (e) {
+                console.error('Failed to fetch data:', e);
+            }
+        },
+
+        initChart() {
+            const ctx = document.getElementById('equityChart').getContext('2d');
+
+            // Sample data - would be replaced with real data
+            const labels = [];
+            const data = [];
+            let value = 10000;
+            for (let i = 0; i < 168; i++) { // 7 days hourly
+                const date = new Date();
+                date.setHours(date.getHours() - (168 - i));
+                labels.push(date.toLocaleDateString());
+                value += (Math.random() - 0.45) * 50;
+                data.push(value);
+            }
+
+            this.chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Equity',
+                        data: data,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {display: false},
+                    },
+                    scales: {
+                        x: {
+                            display: false,
+                        },
+                        y: {
+                            grid: {color: 'rgba(148, 163, 184, 0.1)'},
+                            ticks: {color: '#94a3b8'},
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index',
+                    },
+                }
+            });
+        },
+
+        async refreshData() {
+            await this.fetchData();
+        }
+    }
+}
+</script>
+{% endblock %}

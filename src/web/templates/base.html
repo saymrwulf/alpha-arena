@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Alpha Arena{% endblock %} - Master Control</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- HTMX for dynamic updates -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+    <!-- Alpine.js for interactivity -->
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <!-- Chart.js for visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            200: '#bfdbfe',
+                            300: '#93c5fd',
+                            400: '#60a5fa',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            800: '#1e40af',
+                            900: '#1e3a8a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        [x-cloak] { display: none !important; }
+
+        .sidebar-link {
+            @apply flex items-center gap-3 px-4 py-3 text-slate-300 hover:bg-slate-700/50 hover:text-white rounded-lg transition-all;
+        }
+        .sidebar-link.active {
+            @apply bg-primary-600/20 text-primary-400 border-l-2 border-primary-500;
+        }
+
+        .card {
+            @apply bg-slate-800 border border-slate-700 rounded-xl p-6;
+        }
+
+        .btn {
+            @apply px-4 py-2 rounded-lg font-medium transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900;
+        }
+        .btn-primary {
+            @apply bg-primary-600 hover:bg-primary-700 text-white focus:ring-primary-500;
+        }
+        .btn-success {
+            @apply bg-emerald-600 hover:bg-emerald-700 text-white focus:ring-emerald-500;
+        }
+        .btn-danger {
+            @apply bg-red-600 hover:bg-red-700 text-white focus:ring-red-500;
+        }
+        .btn-secondary {
+            @apply bg-slate-700 hover:bg-slate-600 text-white focus:ring-slate-500;
+        }
+
+        .input {
+            @apply bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+        }
+
+        .badge {
+            @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+        }
+        .badge-success { @apply bg-emerald-500/20 text-emerald-400; }
+        .badge-warning { @apply bg-amber-500/20 text-amber-400; }
+        .badge-danger { @apply bg-red-500/20 text-red-400; }
+        .badge-info { @apply bg-blue-500/20 text-blue-400; }
+
+        .stat-card {
+            @apply bg-slate-800/50 border border-slate-700/50 rounded-xl p-4;
+        }
+
+        .table-header {
+            @apply text-left text-xs font-medium text-slate-400 uppercase tracking-wider;
+        }
+        .table-cell {
+            @apply px-4 py-3 text-sm text-slate-300;
+        }
+
+        /* Animations */
+        @keyframes pulse-green {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+            50% { box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); }
+        }
+        .pulse-green {
+            animation: pulse-green 2s infinite;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+    </style>
+
+    {% block head %}{% endblock %}
+</head>
+<body class="h-full bg-slate-900 text-white" x-data="appState()" x-init="init()">
+    <div class="flex h-full">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-slate-800 border-r border-slate-700 flex flex-col">
+            <!-- Logo -->
+            <div class="p-6 border-b border-slate-700">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-gradient-to-br from-primary-500 to-purple-600 rounded-xl flex items-center justify-center">
+                        <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-lg">Alpha Arena</h1>
+                        <p class="text-xs text-slate-400">Master Control</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Trading Status -->
+            <div class="p-4 border-b border-slate-700">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm text-slate-400">Trading Status</span>
+                    <span x-show="tradingActive" class="badge badge-success">
+                        <span class="w-2 h-2 bg-emerald-400 rounded-full mr-1.5 pulse-green"></span>
+                        Active
+                    </span>
+                    <span x-show="!tradingActive" class="badge badge-warning">Stopped</span>
+                </div>
+                <div class="text-xs text-slate-500" x-text="tradingMode === 'live' ? 'Live Trading' : 'Simulation Mode'"></div>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
+                <a href="/" class="sidebar-link {% if page == 'dashboard' %}active{% endif %}">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                    </svg>
+                    Dashboard
+                </a>
+
+                <a href="/trading" class="sidebar-link {% if page == 'trading' %}active{% endif %}">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Trading Control
+                </a>
+
+                <a href="/positions" class="sidebar-link {% if page == 'positions' %}active{% endif %}">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
+                    Positions & Orders
+                </a>
+
+                <a href="/markets" class="sidebar-link {% if page == 'markets' %}active{% endif %}">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                    </svg>
+                    Markets
+                </a>
+
+                <a href="/wallet-analysis" class="sidebar-link {% if page == 'wallet_analysis' %}active{% endif %}">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    Wallet Analysis
+                </a>
+
+                <a href="/agents" class="sidebar-link {% if page == 'agents' %}active{% endif %}">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    Agents
+                </a>
+
+                <a href="/risk" class="sidebar-link {% if page == 'risk' %}active{% endif %}">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    Risk Management
+                </a>
+
+                <a href="/config" class="sidebar-link {% if page == 'config' %}active{% endif %}">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Configuration
+                </a>
+
+                <a href="/logs" class="sidebar-link {% if page == 'logs' %}active{% endif %}">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Logs & Metrics
+                </a>
+
+                <div class="pt-4 mt-4 border-t border-slate-700">
+                    <a href="/help" class="sidebar-link {% if page == 'help' %}active{% endif %}">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Help & Docs
+                    </a>
+                </div>
+            </nav>
+
+            <!-- Footer -->
+            <div class="p-4 border-t border-slate-700">
+                <div class="text-xs text-slate-500">
+                    <div class="flex items-center justify-between mb-1">
+                        <span>WebSocket</span>
+                        <span x-show="wsConnected" class="text-emerald-400">Connected</span>
+                        <span x-show="!wsConnected" class="text-red-400">Disconnected</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span>Last Update</span>
+                        <span x-text="lastUpdate"></span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 overflow-auto">
+            <!-- Header -->
+            <header class="sticky top-0 z-10 bg-slate-900/95 backdrop-blur border-b border-slate-700 px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xl font-semibold">{% block page_title %}Dashboard{% endblock %}</h2>
+                        <p class="text-sm text-slate-400">{% block page_subtitle %}System Overview{% endblock %}</p>
+                    </div>
+
+                    <div class="flex items-center gap-4">
+                        <!-- Quick Stats -->
+                        <div class="flex items-center gap-6 mr-4">
+                            <div class="text-right">
+                                <div class="text-xs text-slate-400">Balance</div>
+                                <div class="text-lg font-semibold text-emerald-400" x-text="'$' + balance"></div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-xs text-slate-400">Daily P&L</div>
+                                <div class="text-lg font-semibold" :class="dailyPnl >= 0 ? 'text-emerald-400' : 'text-red-400'" x-text="(dailyPnl >= 0 ? '+$' : '-$') + Math.abs(dailyPnl).toFixed(2)"></div>
+                            </div>
+                        </div>
+
+                        <!-- Quick Actions -->
+                        <button x-show="!tradingActive" @click="startTrading()" class="btn btn-success">
+                            <svg class="w-4 h-4 mr-2 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                            </svg>
+                            Start Trading
+                        </button>
+                        <button x-show="tradingActive" @click="stopTrading()" class="btn btn-danger">
+                            <svg class="w-4 h-4 mr-2 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                            </svg>
+                            Stop Trading
+                        </button>
+
+                        <!-- Kill Switch -->
+                        <button @click="toggleKillSwitch()" class="btn" :class="killSwitch ? 'btn-danger' : 'btn-secondary'">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Page Content -->
+            <div class="p-6">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <!-- Notifications -->
+    <div x-show="notifications.length > 0" class="fixed bottom-4 right-4 space-y-2 z-50">
+        <template x-for="(notif, index) in notifications" :key="index">
+            <div class="bg-slate-800 border border-slate-600 rounded-lg p-4 shadow-xl max-w-sm"
+                 :class="{'border-emerald-500': notif.type === 'success', 'border-red-500': notif.type === 'error', 'border-amber-500': notif.type === 'warning'}"
+                 x-transition>
+                <div class="flex items-start gap-3">
+                    <div class="flex-1">
+                        <p class="font-medium" x-text="notif.title"></p>
+                        <p class="text-sm text-slate-400" x-text="notif.message"></p>
+                    </div>
+                    <button @click="removeNotification(index)" class="text-slate-400 hover:text-white">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </template>
+    </div>
+
+    <script>
+        function appState() {
+            return {
+                // State
+                tradingActive: false,
+                tradingMode: 'simulation',
+                balance: '0.00',
+                dailyPnl: 0,
+                totalPnl: 0,
+                cycleCount: 0,
+                killSwitch: false,
+                wsConnected: false,
+                lastUpdate: 'Never',
+                notifications: [],
+                ws: null,
+
+                // Initialize
+                init() {
+                    this.connectWebSocket();
+                    this.fetchStatus();
+                },
+
+                // WebSocket
+                connectWebSocket() {
+                    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                    this.ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+
+                    this.ws.onopen = () => {
+                        this.wsConnected = true;
+                        console.log('WebSocket connected');
+                    };
+
+                    this.ws.onclose = () => {
+                        this.wsConnected = false;
+                        console.log('WebSocket disconnected');
+                        // Reconnect after 3 seconds
+                        setTimeout(() => this.connectWebSocket(), 3000);
+                    };
+
+                    this.ws.onmessage = (event) => {
+                        const data = JSON.parse(event.data);
+                        this.handleMessage(data);
+                    };
+                },
+
+                handleMessage(data) {
+                    this.lastUpdate = new Date().toLocaleTimeString();
+
+                    switch(data.type) {
+                        case 'init':
+                            this.tradingActive = data.data.trading_active;
+                            this.tradingMode = data.data.mode;
+                            this.balance = data.data.balance;
+                            this.dailyPnl = parseFloat(data.data.daily_pnl);
+                            this.cycleCount = data.data.cycle_count;
+                            break;
+                        case 'trading_started':
+                            this.tradingActive = true;
+                            this.tradingMode = data.data.mode;
+                            this.addNotification('success', 'Trading Started', `Running in ${data.data.mode} mode`);
+                            break;
+                        case 'trading_stopped':
+                            this.tradingActive = false;
+                            this.addNotification('warning', 'Trading Stopped', 'Trading loop has been stopped');
+                            break;
+                        case 'cycle_complete':
+                            this.cycleCount = data.data.cycle_count;
+                            this.dailyPnl = parseFloat(data.data.daily_pnl);
+                            break;
+                        case 'kill_switch':
+                            this.killSwitch = data.data.enabled;
+                            break;
+                    }
+                },
+
+                // API calls
+                async fetchStatus() {
+                    try {
+                        const resp = await fetch('/api/trading/status');
+                        const data = await resp.json();
+                        this.tradingActive = data.active;
+                        this.tradingMode = data.mode;
+                        this.balance = data.balance;
+                        this.dailyPnl = parseFloat(data.daily_pnl);
+                        this.cycleCount = data.cycle_count;
+                    } catch (e) {
+                        console.error('Failed to fetch status:', e);
+                    }
+                },
+
+                async startTrading() {
+                    try {
+                        const resp = await fetch('/api/trading/start', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({mode: this.tradingMode, loop_interval: 60})
+                        });
+                        const data = await resp.json();
+                        if (resp.ok) {
+                            this.tradingActive = true;
+                        }
+                    } catch (e) {
+                        this.addNotification('error', 'Error', 'Failed to start trading');
+                    }
+                },
+
+                async stopTrading() {
+                    try {
+                        const resp = await fetch('/api/trading/stop', {method: 'POST'});
+                        if (resp.ok) {
+                            this.tradingActive = false;
+                        }
+                    } catch (e) {
+                        this.addNotification('error', 'Error', 'Failed to stop trading');
+                    }
+                },
+
+                async toggleKillSwitch() {
+                    const newState = !this.killSwitch;
+                    try {
+                        const formData = new FormData();
+                        formData.append('enabled', newState);
+                        const resp = await fetch('/api/trading/kill-switch', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        if (resp.ok) {
+                            this.killSwitch = newState;
+                            this.addNotification(
+                                newState ? 'warning' : 'success',
+                                'Kill Switch',
+                                newState ? 'Kill switch activated - all trading halted' : 'Kill switch deactivated'
+                            );
+                        }
+                    } catch (e) {
+                        this.addNotification('error', 'Error', 'Failed to toggle kill switch');
+                    }
+                },
+
+                // Notifications
+                addNotification(type, title, message) {
+                    this.notifications.push({type, title, message});
+                    setTimeout(() => this.notifications.shift(), 5000);
+                },
+
+                removeNotification(index) {
+                    this.notifications.splice(index, 1);
+                }
+            }
+        }
+    </script>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

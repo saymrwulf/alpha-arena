@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+
+{% block title %}Logs & Metrics{% endblock %}
+{% block page_title %}Logs & Metrics{% endblock %}
+{% block page_subtitle %}View system logs and performance metrics{% endblock %}
+
+{% block content %}
+<div x-data="logsPage()">
+    <!-- Tabs -->
+    <div class="flex gap-2 mb-6">
+        <button @click="activeTab = 'decisions'" :class="activeTab === 'decisions' ? 'bg-primary-600' : 'bg-slate-700'" class="px-4 py-2 rounded-lg">Decision Logs</button>
+        <button @click="activeTab = 'metrics'" :class="activeTab === 'metrics' ? 'bg-primary-600' : 'bg-slate-700'" class="px-4 py-2 rounded-lg">Performance</button>
+        <button @click="activeTab = 'system'" :class="activeTab === 'system' ? 'bg-primary-600' : 'bg-slate-700'" class="px-4 py-2 rounded-lg">System Logs</button>
+    </div>
+
+    <!-- Decision Logs -->
+    <div x-show="activeTab === 'decisions'">
+        <div class="card">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="font-semibold">Trading Decisions</h3>
+                <div class="flex gap-2">
+                    <select x-model="decisionFilter" class="input text-sm py-1">
+                        <option value="">All Actions</option>
+                        <option value="buy">Buys</option>
+                        <option value="sell">Sells</option>
+                        <option value="hold">Holds</option>
+                    </select>
+                    <button @click="fetchDecisions()" class="btn btn-secondary text-sm">Refresh</button>
+                </div>
+            </div>
+
+            <div class="space-y-3 max-h-[600px] overflow-y-auto">
+                <template x-for="log in filteredDecisions" :key="log.id">
+                    <div class="p-4 bg-slate-700/30 rounded-lg hover:bg-slate-700/50 cursor-pointer" @click="selectedLog = log; showLogDetail = true">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-3">
+                                <span class="badge" :class="log.action === 'BUY' ? 'badge-success' : log.action === 'SELL' ? 'badge-danger' : 'badge-warning'"
+                                      x-text="log.action"></span>
+                                <span class="font-medium" x-text="log.market?.slice(0, 35) + '...'"></span>
+                            </div>
+                            <span class="text-xs text-slate-400" x-text="log.timestamp"></span>
+                        </div>
+                        <div class="grid grid-cols-4 gap-4 text-sm">
+                            <div>
+                                <span class="text-slate-400">Confidence: </span>
+                                <span x-text="(log.confidence * 100).toFixed(0) + '%'"></span>
+                            </div>
+                            <div>
+                                <span class="text-slate-400">Edge: </span>
+                                <span x-text="(log.edge * 100).toFixed(1) + '%'"></span>
+                            </div>
+                            <div>
+                                <span class="text-slate-400">Size: </span>
+                                <span x-text="'$' + log.size?.toFixed(2)"></span>
+                            </div>
+                            <div>
+                                <span class="text-slate-400">Model: </span>
+                                <span class="font-mono text-xs" x-text="log.model?.split('-').slice(0,2).join('-')"></span>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <div x-show="decisions.length === 0" class="text-center py-12 text-slate-500">
+                    No decision logs found
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance Metrics -->
+    <div x-show="activeTab === 'metrics'" class="space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="stat-card">
+                <div class="text-sm text-slate-400 mb-1">Total P&L</div>
+                <div class="text-2xl font-bold" :class="metrics.total_pnl >= 0 ? 'text-emerald-400' : 'text-red-400'"
+                     x-text="(metrics.total_pnl >= 0 ? '+$' : '-$') + Math.abs(metrics.total_pnl || 0).toFixed(2)"></div>
+            </div>
+            <div class="stat-card">
+                <div class="text-sm text-slate-400 mb-1">Win Rate</div>
+                <div class="text-2xl font-bold text-blue-400" x-text="(metrics.win_rate || 0).toFixed(1) + '%'"></div>
+            </div>
+            <div class="stat-card">
+                <div class="text-sm text-slate-400 mb-1">Sharpe Ratio</div>
+                <div class="text-2xl font-bold text-purple-400" x-text="(metrics.sharpe_ratio || 0).toFixed(2)"></div>
+            </div>
+            <div class="stat-card">
+                <div class="text-sm text-slate-400 mb-1">Total Trades</div>
+                <div class="text-2xl font-bold text-amber-400" x-text="metrics.total_trades || 0"></div>
+            </div>
+        </div>
+
+        <!-- Equity Chart -->
+        <div class="card">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="font-semibold">Equity Curve</h3>
+                <div class="flex gap-2">
+                    <button @click="chartPeriod = '7d'" :class="chartPeriod === '7d' ? 'bg-primary-600' : 'bg-slate-700'" class="px-3 py-1 rounded text-sm">7D</button>
+                    <button @click="chartPeriod = '30d'" :class="chartPeriod === '30d' ? 'bg-primary-600' : 'bg-slate-700'" class="px-3 py-1 rounded text-sm">30D</button>
+                    <button @click="chartPeriod = 'all'" :class="chartPeriod === 'all' ? 'bg-primary-600' : 'bg-slate-700'" class="px-3 py-1 rounded text-sm">All</button>
+                </div>
+            </div>
+            <div class="h-64">
+                <canvas id="equityChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Trade Distribution -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="card">
+                <h3 class="font-semibold mb-4">Win/Loss Distribution</h3>
+                <div class="h-48">
+                    <canvas id="winLossChart"></canvas>
+                </div>
+            </div>
+            <div class="card">
+                <h3 class="font-semibold mb-4">P&L by Category</h3>
+                <div class="h-48">
+                    <canvas id="categoryChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Logs -->
+    <div x-show="activeTab === 'system'" class="card">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold">System Logs</h3>
+            <div class="flex gap-2">
+                <select x-model="logLevel" class="input text-sm py-1">
+                    <option value="">All Levels</option>
+                    <option value="ERROR">Errors</option>
+                    <option value="WARNING">Warnings</option>
+                    <option value="INFO">Info</option>
+                </select>
+                <button @click="fetchSystemLogs()" class="btn btn-secondary text-sm">Refresh</button>
+            </div>
+        </div>
+
+        <div class="font-mono text-sm bg-slate-900 rounded-lg p-4 h-[500px] overflow-y-auto">
+            <template x-for="(log, index) in systemLogs" :key="index">
+                <div class="py-1 hover:bg-slate-800 px-2 rounded" :class="{'text-red-400': log.level === 'ERROR', 'text-amber-400': log.level === 'WARNING'}">
+                    <span class="text-slate-500" x-text="log.timestamp"></span>
+                    <span class="mx-2" :class="log.level === 'ERROR' ? 'text-red-400' : log.level === 'WARNING' ? 'text-amber-400' : 'text-blue-400'"
+                          x-text="'[' + log.level + ']'"></span>
+                    <span x-text="log.message"></span>
+                </div>
+            </template>
+            <div x-show="systemLogs.length === 0" class="text-center py-12 text-slate-500">
+                No system logs available
+            </div>
+        </div>
+    </div>
+
+    <!-- Log Detail Modal -->
+    <div x-show="showLogDetail" x-cloak class="fixed inset-0 z-50" @click.self="showLogDetail = false">
+        <div class="flex min-h-screen items-center justify-center p-4">
+            <div class="fixed inset-0 bg-black/50 backdrop-blur-sm"></div>
+            <div class="relative bg-slate-800 rounded-xl w-full max-w-2xl p-6 border border-slate-700 max-h-[80vh] overflow-y-auto">
+                <button @click="showLogDetail = false" class="absolute right-4 top-4 text-slate-400 hover:text-white">
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+                <h3 class="text-xl font-semibold mb-4">Decision Details</h3>
+                <pre class="bg-slate-900 rounded-lg p-4 text-sm overflow-x-auto" x-text="JSON.stringify(selectedLog, null, 2)"></pre>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function logsPage() {
+    return {
+        activeTab: 'decisions',
+        decisions: [],
+        decisionFilter: '',
+        metrics: {},
+        chartPeriod: '7d',
+        systemLogs: [],
+        logLevel: '',
+        showLogDetail: false,
+        selectedLog: null,
+
+        get filteredDecisions() {
+            if (!this.decisionFilter) return this.decisions;
+            return this.decisions.filter(d => d.action.toLowerCase().includes(this.decisionFilter));
+        },
+
+        async init() {
+            await this.fetchDecisions();
+            await this.fetchMetrics();
+            this.initCharts();
+        },
+
+        async fetchDecisions() {
+            try {
+                const resp = await fetch('/api/logs/decisions?limit=100');
+                const data = await resp.json();
+                this.decisions = data.logs || [];
+            } catch (e) {
+                // Use mock data
+                this.decisions = [
+                    {id: 1, action: 'BUY', market: 'Will Bitcoin exceed $100k by 2024?', timestamp: '10:30:00', confidence: 0.78, edge: 0.12, size: 50, model: 'claude-sonnet-4'},
+                    {id: 2, action: 'HOLD', market: 'Next US President Democrat?', timestamp: '10:25:00', confidence: 0.55, edge: 0.03, size: 0, model: 'claude-sonnet-4'},
+                ];
+            }
+        },
+
+        async fetchMetrics() {
+            try {
+                const resp = await fetch('/api/metrics/performance');
+                this.metrics = await resp.json();
+            } catch (e) {
+                this.metrics = {total_pnl: 0, win_rate: 0, sharpe_ratio: 0, total_trades: 0};
+            }
+        },
+
+        async fetchSystemLogs() {
+            // Would fetch from /api/logs/system
+            this.systemLogs = [];
+        },
+
+        initCharts() {
+            // Equity chart
+            const eqCtx = document.getElementById('equityChart')?.getContext('2d');
+            if (eqCtx) {
+                new Chart(eqCtx, {
+                    type: 'line',
+                    data: {labels: ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Day 7'], datasets: [{label: 'Equity', data: [10000, 10150, 10080, 10250, 10180, 10350, 10420], borderColor: '#3b82f6', fill: true, backgroundColor: 'rgba(59, 130, 246, 0.1)', tension: 0.4}]},
+                    options: {responsive: true, maintainAspectRatio: false, plugins: {legend: {display: false}}, scales: {x: {display: false}, y: {grid: {color: 'rgba(148, 163, 184, 0.1)'}, ticks: {color: '#94a3b8'}}}}
+                });
+            }
+
+            // Win/Loss chart
+            const wlCtx = document.getElementById('winLossChart')?.getContext('2d');
+            if (wlCtx) {
+                new Chart(wlCtx, {
+                    type: 'doughnut',
+                    data: {labels: ['Wins', 'Losses'], datasets: [{data: [65, 35], backgroundColor: ['#22c55e', '#ef4444']}]},
+                    options: {responsive: true, maintainAspectRatio: false}
+                });
+            }
+
+            // Category chart
+            const catCtx = document.getElementById('categoryChart')?.getContext('2d');
+            if (catCtx) {
+                new Chart(catCtx, {
+                    type: 'bar',
+                    data: {labels: ['Politics', 'Crypto', 'Sports'], datasets: [{data: [250, 180, 75], backgroundColor: ['#3b82f6', '#8b5cf6', '#f59e0b']}]},
+                    options: {responsive: true, maintainAspectRatio: false, plugins: {legend: {display: false}}}
+                });
+            }
+        }
+    }
+}
+</script>
+{% endblock %}

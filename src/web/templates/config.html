@@ -1,0 +1,595 @@
+{% extends "base.html" %}
+
+{% block title %}Configuration{% endblock %}
+{% block page_title %}Configuration{% endblock %}
+{% block page_subtitle %}Manage system settings and environment{% endblock %}
+
+{% block content %}
+<div x-data="configPage()">
+    <!-- Tabs -->
+    <div class="flex gap-2 mb-6 overflow-x-auto">
+        <button @click="activeTab = 'general'" :class="activeTab === 'general' ? 'bg-primary-600' : 'bg-slate-700'" class="px-4 py-2 rounded-lg whitespace-nowrap">General</button>
+        <button @click="activeTab = 'llm'" :class="activeTab === 'llm' ? 'bg-primary-600' : 'bg-slate-700'" class="px-4 py-2 rounded-lg whitespace-nowrap">LLM Providers</button>
+        <button @click="activeTab = 'strategy'" :class="activeTab === 'strategy' ? 'bg-primary-600' : 'bg-slate-700'" class="px-4 py-2 rounded-lg whitespace-nowrap">Strategy</button>
+        <button @click="activeTab = 'markets'" :class="activeTab === 'markets' ? 'bg-primary-600' : 'bg-slate-700'" class="px-4 py-2 rounded-lg whitespace-nowrap">Markets</button>
+        <button @click="activeTab = 'data'" :class="activeTab === 'data' ? 'bg-primary-600' : 'bg-slate-700'" class="px-4 py-2 rounded-lg whitespace-nowrap">Data Sources</button>
+    </div>
+
+    <!-- General Settings -->
+    <div x-show="activeTab === 'general'" class="space-y-6">
+        <div class="card">
+            <h3 class="font-semibold mb-4">Operating Mode</h3>
+            <div class="grid grid-cols-2 gap-4">
+                <button @click="config.mode = 'simulation'"
+                        :class="config.mode === 'simulation' ? 'ring-2 ring-primary-500 bg-primary-500/20' : 'bg-slate-700'"
+                        class="p-4 rounded-lg text-left">
+                    <div class="font-medium">Simulation</div>
+                    <div class="text-xs text-slate-400 mt-1">Paper trading, no real funds at risk</div>
+                </button>
+                <button @click="config.mode = 'live'"
+                        :class="config.mode === 'live' ? 'ring-2 ring-red-500 bg-red-500/20' : 'bg-slate-700'"
+                        class="p-4 rounded-lg text-left">
+                    <div class="font-medium text-red-400">Live Trading</div>
+                    <div class="text-xs text-slate-400 mt-1">Real trades with actual funds</div>
+                </button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 class="font-semibold mb-4">Agent Settings</h3>
+            <div class="grid grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Loop Interval (seconds)</label>
+                    <input type="number" x-model="config.agent.loop_interval_seconds" class="input w-full">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Max Iterations</label>
+                    <input type="number" x-model="config.agent.max_iterations" placeholder="Unlimited" class="input w-full">
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 class="font-semibold mb-4">Logging</h3>
+            <div class="grid grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Log Level</label>
+                    <select x-model="config.logging.level" class="input w-full">
+                        <option value="DEBUG">Debug</option>
+                        <option value="INFO">Info</option>
+                        <option value="WARNING">Warning</option>
+                        <option value="ERROR">Error</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Decision Log Path</label>
+                    <input type="text" x-model="config.logging.jsonl_file" class="input w-full font-mono text-sm">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- LLM Providers -->
+    <div x-show="activeTab === 'llm'" class="space-y-6">
+        <!-- Active Provider & Initialization -->
+        <div class="card">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="font-semibold">Active Provider</h3>
+                <div class="flex gap-2">
+                    <button @click="initializeProviders()" class="btn btn-sm btn-secondary" :disabled="llmState.initializing">
+                        <span x-show="!llmState.initializing">Initialize</span>
+                        <span x-show="llmState.initializing">Initializing...</span>
+                    </button>
+                    <button @click="checkHealth()" class="btn btn-sm btn-secondary" :disabled="!llmState.initialized">
+                        Check Health
+                    </button>
+                </div>
+            </div>
+
+            <div x-show="!llmState.initialized" class="p-6 bg-amber-500/10 border border-amber-500/30 rounded-lg text-center">
+                <p class="text-amber-400">Provider registry not initialized</p>
+                <p class="text-sm text-slate-400 mt-2">Click "Initialize" to connect to configured providers</p>
+            </div>
+
+            <div x-show="llmState.initialized" class="space-y-4">
+                <div class="grid grid-cols-5 gap-3">
+                    <template x-for="provider in ['anthropic', 'openai', 'google', 'xai', 'local']" :key="provider">
+                        <button @click="setActiveProvider(provider)"
+                                :disabled="!llmState.connectedProviders.includes(provider)"
+                                class="p-4 rounded-lg text-center transition-all"
+                                :class="{
+                                    'ring-2 ring-primary-500 bg-primary-500/20': llmState.activeProvider === provider,
+                                    'bg-slate-700/50 hover:bg-slate-700': llmState.activeProvider !== provider && llmState.connectedProviders.includes(provider),
+                                    'bg-slate-800/50 opacity-50 cursor-not-allowed': !llmState.connectedProviders.includes(provider)
+                                }">
+                            <div class="text-2xl mb-2" x-text="getProviderIcon(provider)"></div>
+                            <div class="font-medium capitalize text-sm" x-text="getProviderName(provider)"></div>
+                            <div class="text-xs mt-1"
+                                 :class="llmState.connectedProviders.includes(provider) ? 'text-emerald-400' : 'text-slate-500'"
+                                 x-text="llmState.connectedProviders.includes(provider) ? 'Connected' : 'Not Connected'"></div>
+                        </button>
+                    </template>
+                </div>
+
+                <div x-show="llmState.activeProvider" class="p-3 bg-slate-700/30 rounded-lg">
+                    <span class="text-slate-400">Active:</span>
+                    <span class="font-medium text-primary-400 capitalize" x-text="getProviderName(llmState.activeProvider)"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Provider Health Status -->
+        <div class="card">
+            <h3 class="font-semibold mb-4">Provider Health</h3>
+            <div class="space-y-3">
+                <template x-for="provider in ['anthropic', 'openai', 'google', 'xai', 'local']" :key="provider">
+                    <div class="flex items-center justify-between p-4 bg-slate-700/30 rounded-lg">
+                        <div class="flex items-center gap-3">
+                            <div class="w-3 h-3 rounded-full"
+                                 :class="{
+                                     'bg-emerald-400': getHealthStatus(provider) === 'healthy',
+                                     'bg-amber-400': getHealthStatus(provider) === 'degraded',
+                                     'bg-red-400': getHealthStatus(provider) === 'unhealthy',
+                                     'bg-slate-500': getHealthStatus(provider) === 'unknown'
+                                 }"></div>
+                            <div>
+                                <span class="font-medium capitalize" x-text="getProviderName(provider)"></span>
+                                <div class="text-xs text-slate-500" x-text="getHealthDetails(provider)"></div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <span class="text-xs text-slate-400" x-text="getLatencyText(provider)"></span>
+                            <span class="badge"
+                                  :class="{
+                                      'badge-success': getHealthStatus(provider) === 'healthy',
+                                      'badge-warning': getHealthStatus(provider) === 'degraded',
+                                      'badge-danger': getHealthStatus(provider) === 'unhealthy',
+                                      'bg-slate-600': getHealthStatus(provider) === 'unknown'
+                                  }"
+                                  x-text="getHealthStatus(provider)"></span>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- Fallback Order -->
+        <div class="card">
+            <h3 class="font-semibold mb-4">Fallback Order</h3>
+            <p class="text-sm text-slate-400 mb-4">If the active provider fails, the system will try providers in this order:</p>
+            <div class="space-y-2">
+                <template x-for="(provider, index) in llmState.fallbackOrder" :key="provider">
+                    <div class="flex items-center gap-3 p-3 bg-slate-700/30 rounded-lg">
+                        <span class="text-slate-500 font-mono text-sm w-6" x-text="index + 1"></span>
+                        <span class="flex-1 capitalize" x-text="getProviderName(provider)"></span>
+                        <div class="flex gap-1">
+                            <button @click="moveFallback(index, -1)" :disabled="index === 0"
+                                    class="p-1 hover:bg-slate-600 rounded" :class="{'opacity-50': index === 0}">↑</button>
+                            <button @click="moveFallback(index, 1)" :disabled="index === llmState.fallbackOrder.length - 1"
+                                    class="p-1 hover:bg-slate-600 rounded" :class="{'opacity-50': index === llmState.fallbackOrder.length - 1}">↓</button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+            <button @click="saveFallbackOrder()" class="btn btn-sm btn-primary mt-4">Save Fallback Order</button>
+        </div>
+
+        <!-- Local Provider Settings -->
+        <div class="card">
+            <h3 class="font-semibold mb-4">Local Provider Configuration</h3>
+            <div class="grid grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Backend</label>
+                    <select x-model="config.llm.local_backend" class="input w-full" @change="updateLocalUrl()">
+                        <option value="ollama">Ollama (Port 11434)</option>
+                        <option value="lmstudio">LM Studio (Port 1234)</option>
+                        <option value="vllm">vLLM (Port 8000)</option>
+                        <option value="custom">Custom URL</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Base URL</label>
+                    <input type="text" x-model="config.llm.local_url" class="input w-full font-mono text-sm"
+                           :disabled="config.llm.local_backend !== 'custom'">
+                </div>
+            </div>
+            <p class="text-xs text-slate-500 mt-4">
+                Local models provide fallback when cloud APIs are unavailable. Supports DeepSeek, Qwen, Llama, Kimi K2, and more.
+            </p>
+        </div>
+
+        <!-- Model Settings -->
+        <div class="card">
+            <h3 class="font-semibold mb-4">Model Settings</h3>
+            <div class="grid grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Temperature</label>
+                    <input type="number" x-model="config.llm.temperature" min="0" max="2" step="0.1" class="input w-full">
+                    <p class="text-xs text-slate-500 mt-1">Lower = more deterministic</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Max Tokens</label>
+                    <input type="number" x-model="config.llm.max_tokens" min="256" max="8192" class="input w-full">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Strategy Settings -->
+    <div x-show="activeTab === 'strategy'" class="space-y-6">
+        <div class="card">
+            <h3 class="font-semibold mb-4">Strategy Configuration</h3>
+            <div class="grid grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Default Strategy</label>
+                    <select x-model="config.strategy.default" class="input w-full">
+                        <option value="multi_agent">Multi-Agent</option>
+                        <option value="momentum">Momentum</option>
+                        <option value="mean_reversion">Mean Reversion</option>
+                        <option value="arbitrage">Arbitrage</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Min Confidence</label>
+                    <input type="number" x-model="config.strategy.min_confidence" min="0" max="1" step="0.05" class="input w-full">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Min Edge</label>
+                    <input type="number" x-model="config.strategy.min_edge" min="0" max="0.5" step="0.01" class="input w-full">
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 class="font-semibold mb-4">Exit Planning</h3>
+            <div class="grid grid-cols-3 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Profit Target (%)</label>
+                    <input type="number" x-model="config.exit.profit_target_pct" min="0" step="0.01" class="input w-full">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Stop Loss (%)</label>
+                    <input type="number" x-model="config.exit.stop_loss_pct" min="0" step="0.01" class="input w-full">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Max Hold (hours)</label>
+                    <input type="number" x-model="config.exit.max_hold_hours" min="1" class="input w-full">
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 class="font-semibold mb-4">Technical Indicators</h3>
+            <div class="grid grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">EMA Periods</label>
+                    <input type="text" x-model="indicatorEmas" placeholder="9, 21, 50" class="input w-full">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">RSI Period</label>
+                    <input type="number" x-model="config.indicators.rsi_period" min="5" max="30" class="input w-full">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">RSI Oversold</label>
+                    <input type="number" x-model="config.indicators.rsi_oversold" min="10" max="40" class="input w-full">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">RSI Overbought</label>
+                    <input type="number" x-model="config.indicators.rsi_overbought" min="60" max="90" class="input w-full">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Markets Filter -->
+    <div x-show="activeTab === 'markets'" class="space-y-6">
+        <div class="card">
+            <h3 class="font-semibold mb-4">Market Filters</h3>
+            <div class="grid grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Min Liquidity (USDC)</label>
+                    <input type="number" x-model="config.markets.min_liquidity_usdc" min="0" class="input w-full">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Min 24h Volume (USDC)</label>
+                    <input type="number" x-model="config.markets.min_volume_24h_usdc" min="0" class="input w-full">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Max Markets per Cycle</label>
+                    <input type="number" x-model="config.markets.max_markets_per_cycle" min="1" max="100" class="input w-full">
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 class="font-semibold mb-4">Category Filter</h3>
+            <p class="text-sm text-slate-400 mb-4">Select categories to include (empty = all)</p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <label class="flex items-center gap-2 p-3 bg-slate-700/30 rounded-lg cursor-pointer">
+                    <input type="checkbox" value="politics" x-model="config.markets.categories" class="rounded bg-slate-600 border-slate-500 text-primary-500">
+                    <span>Politics</span>
+                </label>
+                <label class="flex items-center gap-2 p-3 bg-slate-700/30 rounded-lg cursor-pointer">
+                    <input type="checkbox" value="crypto" x-model="config.markets.categories" class="rounded bg-slate-600 border-slate-500 text-primary-500">
+                    <span>Crypto</span>
+                </label>
+                <label class="flex items-center gap-2 p-3 bg-slate-700/30 rounded-lg cursor-pointer">
+                    <input type="checkbox" value="sports" x-model="config.markets.categories" class="rounded bg-slate-600 border-slate-500 text-primary-500">
+                    <span>Sports</span>
+                </label>
+                <label class="flex items-center gap-2 p-3 bg-slate-700/30 rounded-lg cursor-pointer">
+                    <input type="checkbox" value="entertainment" x-model="config.markets.categories" class="rounded bg-slate-600 border-slate-500 text-primary-500">
+                    <span>Entertainment</span>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Sources -->
+    <div x-show="activeTab === 'data'" class="space-y-6">
+        <div class="card">
+            <h3 class="font-semibold mb-4">Refresh Intervals</h3>
+            <div class="grid grid-cols-3 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Market Data (seconds)</label>
+                    <input type="number" x-model="config.data.polymarket_refresh_seconds" min="10" class="input w-full">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Sentiment (seconds)</label>
+                    <input type="number" x-model="config.data.sentiment_refresh_seconds" min="60" class="input w-full">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Indicators (seconds)</label>
+                    <input type="number" x-model="config.data.indicator_refresh_seconds" min="30" class="input w-full">
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 class="font-semibold mb-4">Arbitrage</h3>
+            <div class="space-y-4">
+                <label class="flex items-center gap-3 p-3 bg-slate-700/30 rounded-lg cursor-pointer">
+                    <input type="checkbox" x-model="config.arbitrage.enabled" class="rounded bg-slate-600 border-slate-500 text-primary-500">
+                    <div>
+                        <div class="font-medium">Enable Arbitrage Detection</div>
+                        <div class="text-xs text-slate-400">Scan for cross-platform arbitrage</div>
+                    </div>
+                </label>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Min Profit (%)</label>
+                    <input type="number" x-model="config.arbitrage.min_profit_pct" min="0.1" step="0.1" class="input w-full">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Save Button -->
+    <div class="mt-6 flex justify-end gap-4">
+        <button @click="exportConfig()" class="btn btn-secondary">Export Config</button>
+        <button @click="saveConfig()" class="btn btn-primary">Save Configuration</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function configPage() {
+    return {
+        activeTab: 'general',
+        providers: {},
+        indicatorEmas: '9, 21, 50',
+        config: {
+            mode: 'simulation',
+            agent: {loop_interval_seconds: 60, max_iterations: null},
+            llm: {
+                default_provider: 'anthropic',
+                default_model: 'claude-sonnet-4-20250514',
+                temperature: 0.3,
+                max_tokens: 4096,
+                local_backend: 'ollama',
+                local_url: 'http://localhost:11434/v1'
+            },
+            strategy: {default: 'multi_agent', min_confidence: 0.6, min_edge: 0.05},
+            exit: {profit_target_pct: 0.15, stop_loss_pct: 0.10, max_hold_hours: 72},
+            indicators: {rsi_period: 14, rsi_oversold: 30, rsi_overbought: 70},
+            markets: {min_liquidity_usdc: 5000, min_volume_24h_usdc: 1000, max_markets_per_cycle: 20, categories: []},
+            data: {polymarket_refresh_seconds: 30, sentiment_refresh_seconds: 300, indicator_refresh_seconds: 60},
+            arbitrage: {enabled: true, min_profit_pct: 0.5},
+            logging: {level: 'INFO', jsonl_file: 'logs/decisions.jsonl'},
+        },
+
+        // LLM Provider State
+        llmState: {
+            initialized: false,
+            initializing: false,
+            activeProvider: null,
+            connectedProviders: [],
+            fallbackOrder: ['anthropic', 'openai', 'google', 'xai', 'local'],
+            health: {}
+        },
+
+        async init() {
+            await this.fetchConfig();
+            await this.fetchProviders();
+            await this.fetchLLMState();
+        },
+
+        async fetchConfig() {
+            try {
+                const resp = await fetch('/api/config');
+                const data = await resp.json();
+                this.config = {...this.config, ...data};
+            } catch (e) {
+                console.error('Failed to fetch config');
+            }
+        },
+
+        async fetchProviders() {
+            try {
+                const resp = await fetch('/api/system/providers');
+                this.providers = await resp.json();
+            } catch (e) {
+                console.error('Failed to fetch providers');
+            }
+        },
+
+        async fetchLLMState() {
+            try {
+                const resp = await fetch('/api/llm/providers');
+                const data = await resp.json();
+                this.llmState.initialized = data.registry_initialized || false;
+                this.llmState.activeProvider = data.active_provider;
+                this.llmState.connectedProviders = data.connected_providers || [];
+                this.llmState.fallbackOrder = data.fallback_order || ['anthropic', 'openai', 'google', 'xai', 'local'];
+                this.llmState.health = data.health || {};
+            } catch (e) {
+                console.error('Failed to fetch LLM state');
+            }
+        },
+
+        async initializeProviders() {
+            this.llmState.initializing = true;
+            try {
+                const resp = await fetch('/api/llm/initialize', {method: 'POST'});
+                const data = await resp.json();
+                if (resp.ok) {
+                    this.llmState.initialized = true;
+                    this.llmState.activeProvider = data.active_provider;
+                    this.llmState.connectedProviders = data.connected_providers;
+                    this.llmState.health = data.health;
+                    alert('Providers initialized! Active: ' + data.active_provider);
+                } else {
+                    alert('Initialization failed: ' + (data.detail || 'Unknown error'));
+                }
+            } catch (e) {
+                alert('Failed to initialize providers: ' + e.message);
+            }
+            this.llmState.initializing = false;
+        },
+
+        async setActiveProvider(provider) {
+            if (!this.llmState.connectedProviders.includes(provider)) return;
+            try {
+                const resp = await fetch('/api/llm/active', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({provider})
+                });
+                if (resp.ok) {
+                    this.llmState.activeProvider = provider;
+                } else {
+                    const data = await resp.json();
+                    alert('Failed to switch: ' + (data.detail || 'Unknown error'));
+                }
+            } catch (e) {
+                alert('Failed to switch provider: ' + e.message);
+            }
+        },
+
+        async checkHealth() {
+            try {
+                const resp = await fetch('/api/llm/health/check', {method: 'POST'});
+                const data = await resp.json();
+                this.llmState.health = data.health;
+            } catch (e) {
+                console.error('Health check failed');
+            }
+        },
+
+        moveFallback(index, direction) {
+            const newIndex = index + direction;
+            if (newIndex < 0 || newIndex >= this.llmState.fallbackOrder.length) return;
+            const order = [...this.llmState.fallbackOrder];
+            [order[index], order[newIndex]] = [order[newIndex], order[index]];
+            this.llmState.fallbackOrder = order;
+        },
+
+        async saveFallbackOrder() {
+            try {
+                const resp = await fetch('/api/llm/fallback-order', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({order: this.llmState.fallbackOrder})
+                });
+                if (resp.ok) {
+                    alert('Fallback order saved!');
+                }
+            } catch (e) {
+                alert('Failed to save fallback order');
+            }
+        },
+
+        updateLocalUrl() {
+            const urls = {
+                ollama: 'http://localhost:11434/v1',
+                lmstudio: 'http://localhost:1234/v1',
+                vllm: 'http://localhost:8000/v1',
+                custom: this.config.llm.local_url
+            };
+            this.config.llm.local_url = urls[this.config.llm.local_backend] || urls.ollama;
+        },
+
+        getProviderName(provider) {
+            const names = {
+                anthropic: 'Claude',
+                openai: 'OpenAI',
+                google: 'Gemini',
+                xai: 'Grok',
+                local: 'Local'
+            };
+            return names[provider] || provider;
+        },
+
+        getProviderIcon(provider) {
+            const icons = {
+                anthropic: '🤖',
+                openai: '🧠',
+                google: '💎',
+                xai: '⚡',
+                local: '🏠'
+            };
+            return icons[provider] || '❓';
+        },
+
+        getHealthStatus(provider) {
+            const health = this.llmState.health[provider];
+            if (!health) return 'unknown';
+            if (health.is_healthy) return 'healthy';
+            if (health.consecutive_failures > 0 && health.consecutive_failures < 3) return 'degraded';
+            return 'unhealthy';
+        },
+
+        getHealthDetails(provider) {
+            const health = this.llmState.health[provider];
+            if (!health) return 'No data';
+            if (health.last_error) return `Error: ${health.last_error.substring(0, 50)}...`;
+            return `${health.total_requests} requests, ${health.success_rate?.toFixed(1) || 100}% success`;
+        },
+
+        getLatencyText(provider) {
+            const health = this.llmState.health[provider];
+            if (!health || !health.latency_ms) return '';
+            return `${health.latency_ms}ms`;
+        },
+
+        async saveConfig() {
+            await fetch('/api/config', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(this.config)
+            });
+            alert('Configuration saved!');
+        },
+
+        exportConfig() {
+            const blob = new Blob([JSON.stringify(this.config, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'config.json';
+            a.click();
+        }
+    }
+}
+</script>
+{% endblock %}
