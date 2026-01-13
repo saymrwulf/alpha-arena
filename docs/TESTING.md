@@ -39,6 +39,10 @@ tests/
 ├── conftest.py          # Shared fixtures and configuration
 ├── test_api.py          # API endpoint tests
 ├── test_e2e.py          # End-to-end functional tests
+├── test_integration.py  # Multi-agent integration tests (NEW)
+├── test_debate.py       # Debate system tests (NEW)
+├── test_signals.py      # Signal aggregation tests (NEW)
+├── test_llm_providers.py# LLM provider tests (NEW)
 ├── test_risk.py         # Risk management unit tests
 ├── test_pnl.py          # PnL accounting unit tests
 ├── test_indicators.py   # Technical indicator tests
@@ -46,6 +50,8 @@ tests/
 ├── test_backtest.py     # Backtesting tests
 └── test_core_types.py   # Core type tests
 ```
+
+**Test count: 328+ tests**
 
 ## Test Categories
 
@@ -103,9 +109,30 @@ async def test_health_check(async_client):
     assert response.json()["status"] == "healthy"
 ```
 
+### Integration Tests
+
+Test multi-component integration with mocked LLM providers.
+
+```bash
+pytest -m "integration"
+```
+
+**What's tested:**
+- Full agent coordination (Research → Risk → Debate → Execution)
+- Multi-agent debate with multiple personas
+- Confidence calibration tracking
+- Signal aggregation from multiple sources
+- Event calendar impact on trading
+- End-to-end trading cycle with mocked broker
+- Risk rejection scenarios
+- LLM failure handling
+- Performance metrics tracking
+
+**Key fixture:** `MockLLMProvider` - Returns structured JSON responses matching the real `LLMResponse` interface.
+
 ### End-to-End Tests
 
-Test complete user workflows.
+Test complete user workflows via API.
 
 ```bash
 ./scripts/test.sh e2e
