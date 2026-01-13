@@ -23,6 +23,7 @@
 		AA000014 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100014; };
 		AA000015 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA100015; };
 		AA000016 /* PreferencesWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100017; };
+		AA000017 /* LLMProviderState.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100018; };
 		AAT00001 /* ModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAT10001; };
 		AAT00002 /* ServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAT10002; };
 		AAT00003 /* ViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAT10003; };
@@ -56,6 +57,7 @@
 		AA100015 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AA100016 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		AA100017 /* PreferencesWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesWindowController.swift; sourceTree = "<group>"; };
+		AA100018 /* LLMProviderState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMProviderState.swift; sourceTree = "<group>"; };
 		AA200001 /* AlphaArena.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AlphaArena.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AAT10001 /* ModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelTests.swift; sourceTree = "<group>"; };
 		AAT10002 /* ServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceTests.swift; sourceTree = "<group>"; };
@@ -142,6 +144,7 @@
 				AA100011 /* ServerState.swift */,
 				AA100012 /* TradingStatus.swift */,
 				AA100013 /* AppSettings.swift */,
+				AA100018 /* LLMProviderState.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -287,6 +290,7 @@
 				AA000013 /* AppSettings.swift in Sources */,
 				AA000014 /* NotificationManager.swift in Sources */,
 				AA000016 /* PreferencesWindowController.swift in Sources */,
+				AA000017 /* LLMProviderState.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
