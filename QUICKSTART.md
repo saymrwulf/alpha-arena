@@ -99,69 +99,18 @@ ALPHA_HOST=0.0.0.0 ./alpha start
 
 For a native macOS experience, use the menu bar app instead of terminal commands.
 
-### Requirements
-- macOS 13.0 or later
-- Xcode 15.0+ (for building from source)
-
-### Build & Install
-
 ```bash
-# Build the app
-cd macos-app
-./build.sh
-
-# Or build and install to /Applications
-./build.sh install
+# Build and install to /Applications
+cd macos-app && ./build.sh install
 ```
 
-### Open in Xcode (for development)
-```bash
-open macos-app/AlphaArena.xcodeproj
-```
+**Features:**
+- One-click start/stop from menu bar
+- Real-time P&L updates via WebSocket
+- Native macOS notifications
+- Network mode toggle (localhost/LAN)
 
-### Features
-- Native SwiftUI menu bar app
-- Status icon in menu bar (green=running, gray=stopped)
-- Start/Stop server with one click
-- Real-time P&L and position updates via WebSocket
-- Network mode toggle (localhost vs LAN-accessible)
-- Rich notifications with action buttons
-- Open Dashboard, View Logs, Copy URL shortcuts
-- Preferences window for configuration
-
-### Menu Bar Controls
-```
-┌────────────────────────────────────────┐
-│ ● Server Running                       │
-│   http://127.0.0.1:8000                │
-├────────────────────────────────────────┤
-│ P&L: +$127.45 | 5 positions            │
-│ Trading: Active (simulation)           │
-├────────────────────────────────────────┤
-│ Stop Server                   ⌘⇧S      │
-│ Open Dashboard                ⌘D       │
-│ Copy Server URL               ⌘C       │
-│ View Logs                     ⌘L       │
-├────────────────────────────────────────┤
-│ Network Mode                        ▶  │
-│   ✓ Localhost Only (127.0.0.1)        │
-│     LAN Access (0.0.0.0)              │
-├────────────────────────────────────────┤
-│ Preferences...                ⌘,       │
-│ Quit Alpha Arena              ⌘Q       │
-└────────────────────────────────────────┘
-```
-
-### Keyboard Shortcuts
-| Shortcut | Action |
-|----------|--------|
-| ⌘S | Start Server |
-| ⌘⇧S | Stop Server |
-| ⌘D | Open Dashboard |
-| ⌘C | Copy Server URL |
-| ⌘L | View Logs |
-| ⌘, | Preferences |
-| ⌘Q | Quit |
+**See [docs/MACOS_APP_MANUAL.md](docs/MACOS_APP_MANUAL.md) for full documentation.**
 
 ---
 
