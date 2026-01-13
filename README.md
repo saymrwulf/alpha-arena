@@ -42,6 +42,8 @@ Control Alpha Arena from your menu bar:
 - Quick access to dashboard and logs
 - Network mode toggle (localhost/LAN)
 
+**Requires:** macOS 13.0+, Xcode 15.0+ (from App Store)
+
 ```bash
 # Build and install
 cd macos-app && ./build.sh install
