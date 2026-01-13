@@ -267,6 +267,22 @@ Trading: Active (simulation)
 
 ## Troubleshooting
 
+### Build Won't Complete
+
+**"xcodebuild not found"**
+- Install Xcode from the App Store (not just Command Line Tools)
+- Xcode download: https://apps.apple.com/app/xcode/id497799835
+
+**"Xcode Command Line Tools selected instead of Xcode"**
+```bash
+# Switch to full Xcode
+sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+```
+
+**Build errors about missing types**
+- Ensure you have the latest code: `git pull`
+- The Xcode project must include all Swift files in the build
+
 ### App Won't Launch
 
 **"App is damaged and can't be opened"**
