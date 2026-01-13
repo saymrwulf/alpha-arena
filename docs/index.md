@@ -12,6 +12,9 @@ Welcome to Alpha Arena. This guide helps you find the right documentation for yo
 ### Using the web interface?
 **[WEB_APP_MANUAL.md](WEB_APP_MANUAL.md)** - Complete web UI guide with screenshots and workflows
 
+### Using the macOS menu bar app?
+**[MACOS_APP_MANUAL.md](MACOS_APP_MANUAL.md)** - Native SwiftUI app for menu bar control
+
 ### Need the full reference?
 **[USER_MANUAL.md](USER_MANUAL.md)** - CLI commands, multi-agent system, strategies, API reference
 
@@ -29,6 +32,7 @@ Welcome to Alpha Arena. This guide helps you find the right documentation for yo
 |----------|----------|---------|
 | [QUICKSTART.md](../QUICKSTART.md) | Everyone | 5-minute guide, daily commands |
 | [WEB_APP_MANUAL.md](WEB_APP_MANUAL.md) | Operators | Web interface, dashboards, controls |
+| [MACOS_APP_MANUAL.md](MACOS_APP_MANUAL.md) | macOS users | Native menu bar app |
 | [USER_MANUAL.md](USER_MANUAL.md) | Developers | Full CLI, agents, strategies, API |
 | [OPERATIONAL_MANUAL.md](OPERATIONAL_MANUAL.md) | DevOps | Deployment, monitoring, security |
 | [TESTING.md](TESTING.md) | Developers | Test suite, fixtures, patterns |
@@ -40,7 +44,8 @@ Welcome to Alpha Arena. This guide helps you find the right documentation for yo
 ### Beginner
 1. Read [../QUICKSTART.md](../QUICKSTART.md) - Get running
 2. Explore [WEB_APP_MANUAL.md](WEB_APP_MANUAL.md) - Use the web UI
-3. Try simulation mode before live trading
+3. Or try [MACOS_APP_MANUAL.md](MACOS_APP_MANUAL.md) - Native menu bar app
+4. Try simulation mode before live trading
 
 ### Intermediate
 1. Study [USER_MANUAL.md](USER_MANUAL.md) Sections 6-10 - Agents, strategies, risk

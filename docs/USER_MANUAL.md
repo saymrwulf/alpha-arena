@@ -108,38 +108,54 @@ Alpha Arena is a world-class autonomous trading harness for Polymarket predictio
 # 1. Clone and enter directory
 cd alpha-arena
 
-# 2. Create virtual environment
-python -m venv venv
-source venv/bin/activate
+# 2. Start (auto-runs setup if needed)
+./alpha start
 
-# 3. Install dependencies
-pip install -r requirements.txt
+# 3. Configure credentials
+nano .env  # Add your API keys
 
-# 4. Configure credentials
-cp .env.example .env
-# Edit .env with your API keys
+# 4. Restart to apply changes
+./alpha restart
 
-# 5. Verify setup
-python cli.py providers
-
-# 6. Start simulation
-python cli.py run --simulation
+# 5. Open web UI
+./alpha open
 ```
+
+The `./alpha start` command automatically:
+- Creates the virtual environment (`.venv`)
+- Installs all dependencies
+- Creates `.env` from template if missing
+- Starts the server on port 8000
 
 ### 2.2 First Live Trade
 
+1. Open the web dashboard: `./alpha open`
+2. Navigate to **Trading** page
+3. Configure your settings
+4. Start in **simulation mode** first
+5. When ready, switch to **live mode**
+
+### 2.3 Advanced CLI (python cli.py)
+
+For advanced operations, you can use the Python CLI directly:
+
 ```bash
-# Ensure .env has WALLET_PRIVATE_KEY and Polymarket credentials
+# Activate environment first
+source .venv/bin/activate
 
-# Check market status
-python cli.py markets
-
-# Start with enhanced multi-agent mode (recommended)
+# Start enhanced multi-agent mode
 python cli.py run-enhanced --dry-run  # Preview only
 
 # When ready for live trading
 python cli.py run-enhanced
+
+# Other useful commands
+python cli.py markets     # List markets
+python cli.py providers   # Check LLM status
+python cli.py backtest    # Run backtest
 ```
+
+> **Note:** The `./alpha` script is recommended for daily operations. The `python cli.py` commands provide additional features for advanced users.
 
 ---
 
@@ -157,17 +173,17 @@ python cli.py run-enhanced
 
 ### 3.2 Python Environment
 
+The recommended way is to use `./alpha start` which handles setup automatically.
+
+For manual setup:
+
 ```bash
-# Create isolated environment
-python -m venv venv
+# Run the setup script (creates .venv)
+./scripts/setup.sh
 
-# Activate (macOS/Linux)
-source venv/bin/activate
-
-# Activate (Windows)
-.\venv\Scripts\activate
-
-# Install dependencies
+# Or manually:
+python -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 
 # Verify installation
@@ -175,6 +191,8 @@ python -c "from src.core import Edge, Confidence; print('Core OK')"
 python -c "from src.agents import AgentCoordinator; print('Agents OK')"
 python -c "from src.broker import PolymarketBroker; print('Broker OK')"
 ```
+
+> **Note:** The project uses `.venv` (with dot) as the virtual environment directory.
 
 ### 3.3 Wallet Setup
 
@@ -363,9 +381,25 @@ AGENT_LOOP_INTERVAL_SECONDS=60
 
 ## 5. CLI Commands
 
-### 5.1 Command Overview
+### 5.0 Daily Commands (./alpha)
+
+For daily operations, use the `./alpha` script:
 
 ```bash
+./alpha start    # Start server (auto-setup)
+./alpha stop     # Stop server
+./alpha status   # Check status
+./alpha logs     # Watch logs
+./alpha open     # Open web UI
+./alpha test     # Run tests
+```
+
+### 5.1 Advanced CLI (python cli.py)
+
+For advanced operations, activate the venv and use `python cli.py`:
+
+```bash
+source .venv/bin/activate
 python cli.py --help
 ```
 
