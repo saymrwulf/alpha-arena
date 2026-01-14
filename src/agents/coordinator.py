@@ -97,9 +97,11 @@ class AgentCoordinator:
         responses: dict[AgentRole, AgentResponse] = {}
         total_tokens = 0
 
-        # Get memory context
-        context = await self.memory.get_context_for_decision("")
-        performance_context = await self.memory.get_performance_context()
+        # Get memory context (parallel)
+        context, performance_context = await asyncio.gather(
+            self.memory.get_context_for_decision(""),
+            self.memory.get_performance_context(),
+        )
         full_context = f"{context}\n\n{performance_context}"
 
         # Phase 1: Research Agent analyzes markets

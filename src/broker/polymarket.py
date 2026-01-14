@@ -1,9 +1,12 @@
 """Polymarket CLOB API broker implementation."""
 
 import asyncio
+import logging
+import time
+from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
-from typing import Any
+from typing import Any, Callable, TypeVar
 
 import httpx
 from py_clob_client.client import ClobClient
@@ -12,12 +15,63 @@ from py_clob_client.order_builder.constants import BUY, SELL
 
 from .base import Broker, Fill, Order, OrderSide, OrderStatus, Position
 
+logger = logging.getLogger(__name__)
+T = TypeVar("T")
+
+
+@dataclass
+class CacheEntry:
+    """Cached data with expiration."""
+
+    data: Any
+    expires_at: float
+
+
+class BrokerCache:
+    """Simple TTL cache for broker data."""
+
+    def __init__(self):
+        self._cache: dict[str, CacheEntry] = {}
+
+    def get(self, key: str) -> Any | None:
+        """Get cached value if not expired."""
+        entry = self._cache.get(key)
+        if entry is None:
+            return None
+        if time.time() > entry.expires_at:
+            del self._cache[key]
+            return None
+        return entry.data
+
+    def set(self, key: str, data: Any, ttl_seconds: int) -> None:
+        """Cache data with TTL."""
+        self._cache[key] = CacheEntry(
+            data=data,
+            expires_at=time.time() + ttl_seconds,
+        )
+
+    def invalidate(self, key: str) -> None:
+        """Remove a cached entry."""
+        self._cache.pop(key, None)
+
+    def clear(self) -> None:
+        """Clear all cached data."""
+        self._cache.clear()
+
 
 class PolymarketBroker(Broker):
     """Broker implementation for Polymarket CLOB API."""
 
     CLOB_HOST = "https://clob.polymarket.com"
     GAMMA_HOST = "https://gamma-api.polymarket.com"
+
+    # Cache TTLs (seconds)
+    MARKETS_CACHE_TTL = 300  # 5 minutes - market list rarely changes
+    MARKET_CACHE_TTL = 120  # 2 minutes - individual market details
+    ORDERBOOK_CACHE_TTL = 30  # 30 seconds - orderbook updates frequently
+
+    # Timeout for CLOB client operations (seconds)
+    CLOB_TIMEOUT = 30.0
 
     def __init__(
         self,
@@ -34,6 +88,7 @@ class PolymarketBroker(Broker):
         self.chain_id = chain_id
         self._client: ClobClient | None = None
         self._http: httpx.AsyncClient | None = None
+        self._cache = BrokerCache()
 
     async def connect(self) -> None:
         """Connect to Polymarket CLOB API."""
@@ -63,14 +118,16 @@ class PolymarketBroker(Broker):
         if self._client is None:
             raise RuntimeError("Client not connected")
 
-        # Run sync operation in thread pool
-        loop = asyncio.get_event_loop()
-        creds = await loop.run_in_executor(
-            None, self._client.derive_api_key
+        logger.info("Deriving API credentials from private key...")
+        creds = await self._run_sync_with_timeout(
+            self._client.derive_api_key,
+            "derive_api_key",
+            timeout=60.0,  # Key derivation can be slow
         )
 
         # Set credentials on client
         self._client.set_api_creds(creds)
+        logger.info("API credentials derived successfully")
 
     async def disconnect(self) -> None:
         """Disconnect from the API."""
@@ -79,15 +136,47 @@ class PolymarketBroker(Broker):
             self._http = None
         self._client = None
 
+    async def _run_sync_with_timeout(
+        self,
+        func: Callable[[], T],
+        operation_name: str,
+        timeout: float | None = None,
+    ) -> T:
+        """
+        Run a synchronous function in executor with timeout protection.
+
+        Args:
+            func: Synchronous function to run
+            operation_name: Name for logging
+            timeout: Timeout in seconds (default: CLOB_TIMEOUT)
+
+        Raises:
+            asyncio.TimeoutError: If operation exceeds timeout
+        """
+        timeout = timeout or self.CLOB_TIMEOUT
+        loop = asyncio.get_event_loop()
+
+        try:
+            result = await asyncio.wait_for(
+                loop.run_in_executor(None, func),
+                timeout=timeout,
+            )
+            return result
+        except asyncio.TimeoutError:
+            logger.error(f"CLOB operation '{operation_name}' timed out after {timeout}s")
+            raise asyncio.TimeoutError(f"CLOB {operation_name} timed out")
+        except Exception as e:
+            logger.error(f"CLOB operation '{operation_name}' failed: {e}")
+            raise
+
     async def get_balance(self) -> Decimal:
         """Get USDC balance on Polygon."""
         if self._client is None or self._http is None:
             raise RuntimeError("Broker not connected")
 
-        # Get balance from CLOB API
-        loop = asyncio.get_event_loop()
-        balance_info = await loop.run_in_executor(
-            None, self._client.get_balance_allowance
+        balance_info = await self._run_sync_with_timeout(
+            self._client.get_balance_allowance,
+            "get_balance",
         )
 
         # Balance is returned in USDC (6 decimals)
@@ -99,9 +188,9 @@ class PolymarketBroker(Broker):
         if self._client is None:
             raise RuntimeError("Broker not connected")
 
-        loop = asyncio.get_event_loop()
-        positions_data = await loop.run_in_executor(
-            None, self._client.get_positions
+        positions_data = await self._run_sync_with_timeout(
+            self._client.get_positions,
+            "get_positions",
         )
 
         positions = []
@@ -154,19 +243,22 @@ class PolymarketBroker(Broker):
             side=clob_side,
         )
 
-        loop = asyncio.get_event_loop()
-        signed_order = await loop.run_in_executor(
-            None,
-            lambda: self._client.create_order(order_args)
+        logger.info(f"Placing order: {token_id} {side.value} {size} @ {price}")
+
+        signed_order = await self._run_sync_with_timeout(
+            lambda: self._client.create_order(order_args),
+            "create_order",
         )
 
-        response = await loop.run_in_executor(
-            None,
-            lambda: self._client.post_order(signed_order, OrderType.GTC)
+        response = await self._run_sync_with_timeout(
+            lambda: self._client.post_order(signed_order, OrderType.GTC),
+            "post_order",
         )
 
         order_id = response.get("orderID", "")
         status = self._map_order_status(response.get("status", ""))
+
+        logger.info(f"Order placed: {order_id} status={status.value}")
 
         return Order(
             id=order_id,
@@ -184,23 +276,25 @@ class PolymarketBroker(Broker):
         if self._client is None:
             raise RuntimeError("Broker not connected")
 
-        loop = asyncio.get_event_loop()
-        result = await loop.run_in_executor(
-            None,
-            lambda: self._client.cancel(order_id)
+        logger.info(f"Cancelling order: {order_id}")
+
+        result = await self._run_sync_with_timeout(
+            lambda: self._client.cancel(order_id),
+            f"cancel_order_{order_id}",
         )
 
-        return result.get("success", False)
+        success = result.get("success", False)
+        logger.info(f"Cancel order {order_id}: {'success' if success else 'failed'}")
+        return success
 
     async def get_order(self, order_id: str) -> Order | None:
         """Get order status."""
         if self._client is None:
             raise RuntimeError("Broker not connected")
 
-        loop = asyncio.get_event_loop()
-        order_data = await loop.run_in_executor(
-            None,
-            lambda: self._client.get_order(order_id)
+        order_data = await self._run_sync_with_timeout(
+            lambda: self._client.get_order(order_id),
+            f"get_order_{order_id}",
         )
 
         if not order_data:
@@ -226,10 +320,9 @@ class PolymarketBroker(Broker):
         if self._client is None:
             raise RuntimeError("Broker not connected")
 
-        loop = asyncio.get_event_loop()
-        orders_data = await loop.run_in_executor(
-            None,
-            self._client.get_orders
+        orders_data = await self._run_sync_with_timeout(
+            self._client.get_orders,
+            "get_open_orders",
         )
 
         orders = []
@@ -255,10 +348,9 @@ class PolymarketBroker(Broker):
         if self._client is None:
             raise RuntimeError("Broker not connected")
 
-        loop = asyncio.get_event_loop()
-        trades = await loop.run_in_executor(
-            None,
-            self._client.get_trades
+        trades = await self._run_sync_with_timeout(
+            self._client.get_trades,
+            "get_fills",
         )
 
         fills = []
@@ -285,39 +377,58 @@ class PolymarketBroker(Broker):
         return fills
 
     async def get_markets(self, active_only: bool = True) -> list[dict[str, Any]]:
-        """Fetch available markets from Gamma API."""
+        """Fetch available markets from Gamma API (cached)."""
         if self._http is None:
             raise RuntimeError("Broker not connected")
+
+        cache_key = f"markets:{active_only}"
+        cached = self._cache.get(cache_key)
+        if cached is not None:
+            return cached
 
         params = {"active": str(active_only).lower()}
         resp = await self._http.get(f"{self.GAMMA_HOST}/markets", params=params)
         resp.raise_for_status()
 
-        return resp.json()
+        markets = resp.json()
+        self._cache.set(cache_key, markets, self.MARKETS_CACHE_TTL)
+        return markets
 
     async def get_market(self, condition_id: str) -> dict[str, Any] | None:
-        """Get market details by condition ID."""
+        """Get market details by condition ID (cached)."""
         if self._http is None:
             raise RuntimeError("Broker not connected")
+
+        cache_key = f"market:{condition_id}"
+        cached = self._cache.get(cache_key)
+        if cached is not None:
+            return cached
 
         resp = await self._http.get(f"{self.GAMMA_HOST}/markets/{condition_id}")
         if resp.status_code == 404:
             return None
         resp.raise_for_status()
 
-        return resp.json()
+        market = resp.json()
+        self._cache.set(cache_key, market, self.MARKET_CACHE_TTL)
+        return market
 
     async def get_orderbook(self, token_id: str) -> dict[str, Any]:
-        """Get orderbook for a token."""
+        """Get orderbook for a token (cached)."""
         if self._client is None:
             raise RuntimeError("Broker not connected")
 
-        loop = asyncio.get_event_loop()
-        book = await loop.run_in_executor(
-            None,
-            lambda: self._client.get_order_book(token_id)
+        cache_key = f"orderbook:{token_id}"
+        cached = self._cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+        book = await self._run_sync_with_timeout(
+            lambda: self._client.get_order_book(token_id),
+            f"get_orderbook_{token_id[:8]}",
         )
 
+        self._cache.set(cache_key, book, self.ORDERBOOK_CACHE_TTL)
         return book
 
     async def get_midpoint(self, token_id: str) -> Decimal:
@@ -325,10 +436,9 @@ class PolymarketBroker(Broker):
         if self._client is None:
             raise RuntimeError("Broker not connected")
 
-        loop = asyncio.get_event_loop()
-        midpoint = await loop.run_in_executor(
-            None,
-            lambda: self._client.get_midpoint(token_id)
+        midpoint = await self._run_sync_with_timeout(
+            lambda: self._client.get_midpoint(token_id),
+            f"get_midpoint_{token_id[:8]}",
         )
 
         return Decimal(str(midpoint))

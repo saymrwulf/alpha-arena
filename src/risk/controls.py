@@ -1,5 +1,7 @@
 """Risk management and controls for trading."""
 
+import logging
+import traceback
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -8,6 +10,8 @@ from typing import Any
 
 from ..broker.base import Order, Position
 from ..strategy.base import TradeSignal
+
+logger = logging.getLogger(__name__)
 
 
 class RiskViolation(str, Enum):
@@ -190,14 +194,47 @@ class RiskManager:
         self._daily_pnl += pnl
 
     def activate_kill_switch(self, reason: str = "") -> None:
-        """Activate the kill switch."""
+        """
+        Activate the kill switch - emergency stop all trading.
+
+        This is a critical operation that should be audited.
+        """
         self.config.kill_switch = True
-        print(f"KILL SWITCH ACTIVATED: {reason}")
+        activation_time = datetime.utcnow().isoformat()
+
+        # Structured audit log
+        audit_data = {
+            "event": "KILL_SWITCH_ACTIVATED",
+            "timestamp": activation_time,
+            "reason": reason or "Manual activation",
+            "daily_pnl": str(self._daily_pnl),
+            "stack_trace": traceback.format_stack()[-5:],  # Last 5 frames
+        }
+
+        # Log at CRITICAL level for alerting
+        logger.critical(
+            f"KILL SWITCH ACTIVATED | Reason: {reason or 'Manual'} | "
+            f"Daily PnL: {self._daily_pnl} | Time: {activation_time}"
+        )
+        logger.info(f"Kill switch audit data: {audit_data}")
+
+        # Also print for console visibility
+        print(f"\n{'='*60}")
+        print(f"  KILL SWITCH ACTIVATED")
+        print(f"  Reason: {reason or 'Manual activation'}")
+        print(f"  Time: {activation_time}")
+        print(f"{'='*60}\n")
 
     def deactivate_kill_switch(self) -> None:
-        """Deactivate the kill switch."""
+        """Deactivate the kill switch - resume trading capability."""
         self.config.kill_switch = False
-        print("Kill switch deactivated")
+        deactivation_time = datetime.utcnow().isoformat()
+
+        logger.warning(
+            f"Kill switch deactivated | Time: {deactivation_time} | "
+            f"Daily PnL: {self._daily_pnl}"
+        )
+        print(f"Kill switch deactivated at {deactivation_time}")
 
     def get_status(self) -> dict[str, Any]:
         """Get current risk status."""
