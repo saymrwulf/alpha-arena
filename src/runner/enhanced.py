@@ -190,11 +190,17 @@ class EnhancedTradingRunner:
         print(f"{'='*60}")
 
         try:
-            # Phase 1: DATA GATHERING
+            # Phase 1: DATA GATHERING (parallel I/O)
             print("\n[1] DATA GATHERING")
-            await self._refresh_market_data()
-            balance = await self.broker.get_balance()
-            positions = await self.broker.get_positions()
+
+            # Parallelize independent broker calls
+            market_task = self._refresh_market_data()
+            balance_task = self.broker.get_balance()
+            positions_task = self.broker.get_positions()
+
+            _, balance, positions = await asyncio.gather(
+                market_task, balance_task, positions_task
+            )
 
             print(f"    Balance: ${balance:,.2f}")
             print(f"    Open positions: {len(positions)}")
@@ -203,14 +209,19 @@ class EnhancedTradingRunner:
             # Convert to MarketState for agents
             market_states = await self._build_market_states()
 
-            # Update indicators
+            # Parallelize indicators and arbitrage (independent operations)
+            parallel_tasks = []
             if self.config.enable_indicators:
-                await self._update_indicators()
-                print(f"    Indicators updated: {len(self._indicator_cache)}")
-
-            # Scan for arbitrage
+                parallel_tasks.append(self._update_indicators())
             if self.arbitrage:
-                await self._scan_arbitrage()
+                parallel_tasks.append(self._scan_arbitrage())
+
+            if parallel_tasks:
+                await asyncio.gather(*parallel_tasks)
+
+            if self.config.enable_indicators:
+                print(f"    Indicators updated: {len(self._indicator_cache)}")
+            if self.arbitrage:
                 print(f"    Arbitrage opps: {len(self._arbitrage_cache)}")
 
             # Phase 2: MULTI-AGENT DECISION

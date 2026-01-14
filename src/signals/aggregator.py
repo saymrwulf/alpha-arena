@@ -156,6 +156,19 @@ class SignalAggregator:
         self._weights = weights or self.DEFAULT_WEIGHTS
         self._min_confidence = min_confidence
         self._min_edge = min_edge
+        self._news_connected = False
+
+    async def initialize(self) -> None:
+        """Initialize connections (call once at startup)."""
+        if not self._news_connected:
+            await self._news_provider.connect()
+            self._news_connected = True
+
+    async def shutdown(self) -> None:
+        """Clean up connections."""
+        if self._news_connected:
+            await self._news_provider.disconnect()
+            self._news_connected = False
 
     async def aggregate_signals(
         self,
@@ -414,7 +427,11 @@ class SignalAggregator:
     async def _get_news_signal(self, market_question: str) -> Optional[SignalComponent]:
         """Generate signal based on recent news."""
         try:
-            await self._news_provider.connect()
+            # Lazy initialization - connect once and reuse
+            if not self._news_connected:
+                await self._news_provider.connect()
+                self._news_connected = True
+
             news_items = await self._news_provider.get_news_for_market(
                 market_question,
                 hours_back=24,

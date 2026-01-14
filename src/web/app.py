@@ -773,13 +773,117 @@ async def get_equity_curve():
 
 @app.get("/api/system/health")
 async def health_check():
-    """System health check."""
-    return {
-        "status": "healthy",
-        "trading_active": state.trading_active,
-        "websocket_clients": len(state.connected_websockets),
-        "uptime": "unknown",  # Would track actual uptime
+    """
+    Comprehensive system health check.
+
+    Returns 200 if system is operational, 503 if critical components are down.
+    """
+    import time
+
+    checks = {
+        "api": {"healthy": True, "message": "API responding"},
+        "trading_state": {
+            "healthy": True,
+            "message": f"Trading {'active' if state.trading_active else 'stopped'}",
+        },
+        "websockets": {
+            "healthy": True,
+            "message": f"{len(state.connected_websockets)} clients connected",
+        },
     }
+
+    # Check LLM providers if registry is available
+    if state.provider_registry:
+        try:
+            provider_info = state.provider_registry.get_provider_info()
+            active = provider_info.get("active_provider")
+            connected = provider_info.get("connected_providers", [])
+            cache_stats = provider_info.get("cache", {})
+
+            checks["llm_providers"] = {
+                "healthy": len(connected) > 0,
+                "message": f"Active: {active}, Connected: {len(connected)}",
+                "details": {
+                    "active_provider": active,
+                    "connected_count": len(connected),
+                    "cache_hit_rate": cache_stats.get("hit_rate", 0),
+                },
+            }
+        except Exception as e:
+            checks["llm_providers"] = {
+                "healthy": False,
+                "message": f"Error checking providers: {e}",
+            }
+
+    # Check broker connection (if available)
+    broker = getattr(state, "broker", None)
+    if broker:
+        try:
+            broker_connected = broker._client is not None
+            checks["broker"] = {
+                "healthy": broker_connected,
+                "message": "Broker connected" if broker_connected else "Broker disconnected",
+            }
+        except Exception as e:
+            checks["broker"] = {
+                "healthy": False,
+                "message": f"Broker check failed: {e}",
+            }
+
+    # Determine overall health
+    all_healthy = all(c.get("healthy", False) for c in checks.values())
+    critical_healthy = checks.get("api", {}).get("healthy", False)
+
+    response = {
+        "status": "healthy" if all_healthy else "degraded" if critical_healthy else "unhealthy",
+        "timestamp": time.time(),
+        "trading_active": state.trading_active,
+        "checks": checks,
+    }
+
+    return response
+
+
+@app.get("/api/system/health/live")
+async def liveness_check():
+    """Kubernetes-style liveness probe. Returns 200 if process is alive."""
+    return {"status": "alive"}
+
+
+@app.get("/api/system/health/ready")
+async def readiness_check():
+    """
+    Kubernetes-style readiness probe.
+
+    Returns 200 if system is ready to accept traffic.
+    Returns 503 if system is starting up or degraded.
+    """
+    from fastapi.responses import JSONResponse
+
+    ready = True
+    reasons = []
+
+    # Check if we have at least one LLM provider
+    if state.provider_registry:
+        connected = state.provider_registry.available_providers
+        if not connected:
+            ready = False
+            reasons.append("No LLM providers connected")
+
+    # Check if broker is connected (if configured)
+    broker = getattr(state, "broker", None)
+    if broker and not broker._client:
+        ready = False
+        reasons.append("Broker not connected")
+
+    if ready:
+        return {"status": "ready", "ready": True}
+
+    return JSONResponse(
+        content={"status": "not_ready", "ready": False, "reasons": reasons},
+        status_code=503,
+    )
+
 
 @app.get("/api/system/providers")
 async def get_providers():

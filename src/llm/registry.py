@@ -1,9 +1,12 @@
 """LLM provider registry for plug-and-play model switching."""
 
 import asyncio
+import hashlib
+import json
 import logging
 import os
 import time
+from dataclasses import dataclass
 from typing import Type
 
 from ..core.config import Config, LLMProviderConfig
@@ -15,6 +18,112 @@ from .google import GoogleProvider
 from .local import LocalProvider
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class CacheEntry:
+    """Cached LLM response with expiration."""
+
+    response: LLMResponse
+    expires_at: float
+
+
+class ResponseCache:
+    """
+    TTL-based cache for LLM responses.
+
+    Caches identical prompts to reduce API calls and latency.
+    Default TTL is 15 minutes - suitable for market analysis that
+    doesn't change rapidly but shouldn't be stale for hours.
+    """
+
+    def __init__(self, default_ttl_seconds: int = 900, max_size: int = 1000):
+        self._cache: dict[str, CacheEntry] = {}
+        self._default_ttl = default_ttl_seconds
+        self._max_size = max_size
+        self._hits = 0
+        self._misses = 0
+
+    def _make_key(
+        self,
+        messages: list[Message],
+        model: str | None,
+        system: str | None,
+        json_mode: bool,
+        temperature: float | None,
+    ) -> str | None:
+        """
+        Create cache key from request parameters.
+
+        Returns None for non-cacheable requests (high temperature).
+        """
+        # Don't cache high-temperature requests (non-deterministic)
+        if temperature is not None and temperature > 0.3:
+            return None
+
+        # Build hashable representation
+        msg_data = [(m.role, m.content) for m in messages]
+        key_data = {
+            "messages": msg_data,
+            "model": model,
+            "system": system,
+            "json_mode": json_mode,
+        }
+        key_str = json.dumps(key_data, sort_keys=True)
+        return hashlib.sha256(key_str.encode()).hexdigest()[:32]
+
+    def get(self, key: str) -> LLMResponse | None:
+        """Get cached response if valid."""
+        entry = self._cache.get(key)
+        if entry is None:
+            self._misses += 1
+            return None
+
+        if time.time() > entry.expires_at:
+            del self._cache[key]
+            self._misses += 1
+            return None
+
+        self._hits += 1
+        return entry.response
+
+    def set(self, key: str, response: LLMResponse, ttl: int | None = None) -> None:
+        """Cache a response."""
+        # Evict oldest entries if at capacity
+        if len(self._cache) >= self._max_size:
+            self._evict_expired()
+            if len(self._cache) >= self._max_size:
+                # Remove oldest 10%
+                to_remove = list(self._cache.keys())[: self._max_size // 10]
+                for k in to_remove:
+                    del self._cache[k]
+
+        ttl = ttl or self._default_ttl
+        self._cache[key] = CacheEntry(
+            response=response,
+            expires_at=time.time() + ttl,
+        )
+
+    def _evict_expired(self) -> None:
+        """Remove all expired entries."""
+        now = time.time()
+        expired = [k for k, v in self._cache.items() if v.expires_at < now]
+        for k in expired:
+            del self._cache[k]
+
+    def clear(self) -> None:
+        """Clear all cached entries."""
+        self._cache.clear()
+
+    def stats(self) -> dict:
+        """Get cache statistics."""
+        total = self._hits + self._misses
+        return {
+            "size": len(self._cache),
+            "hits": self._hits,
+            "misses": self._misses,
+            "hit_rate": self._hits / total * 100 if total > 0 else 0.0,
+        }
 
 
 PROVIDER_CLASSES: dict[str, Type[LLMProvider]] = {
@@ -100,13 +209,14 @@ class ProviderRegistry:
     - Hot-swapping of active provider
     """
 
-    def __init__(self, config: Config):
+    def __init__(self, config: Config, cache_ttl_seconds: int = 900):
         self.config = config
         self._providers: dict[str, LLMProvider] = {}
         self._connected: set[str] = set()
         self._health: dict[str, ProviderHealth] = {}
         self._active_provider: str | None = None
         self._fallback_order: list[str] = DEFAULT_FALLBACK_ORDER.copy()
+        self._cache = ResponseCache(default_ttl_seconds=cache_ttl_seconds)
 
     async def initialize(self) -> None:
         """Initialize all enabled providers."""
@@ -286,13 +396,38 @@ class ProviderRegistry:
         max_tokens: int | None = None,
         system: str | None = None,
         json_mode: bool = False,
+        use_cache: bool = True,
     ) -> LLMResponse:
         """
         Complete with automatic fallback on failure.
 
         Tries the active provider first, then falls back through
         the fallback chain until one succeeds.
+
+        Args:
+            use_cache: If True, check cache before API call and cache results.
+                       Set to False for requests that need fresh responses.
         """
+        # Check cache first
+        cache_key = None
+        if use_cache:
+            cache_key = self._cache._make_key(
+                messages=messages,
+                model=model,
+                system=system,
+                json_mode=json_mode,
+                temperature=temperature,
+            )
+            if cache_key:
+                cached = self._cache.get(cache_key)
+                if cached:
+                    # Add cache hit metadata
+                    if cached.metadata is None:
+                        cached.metadata = {}
+                    cached.metadata["cache_hit"] = True
+                    logger.debug("LLM cache hit")
+                    return cached
+
         tried: set[str] = set()
         last_error: Exception | None = None
 
@@ -334,6 +469,11 @@ class ProviderRegistry:
                     response.metadata = {}
                 response.metadata["fallback_provider"] = current
                 response.metadata["tried_providers"] = list(tried)
+                response.metadata["cache_hit"] = False
+
+                # Cache successful response
+                if cache_key:
+                    self._cache.set(cache_key, response)
 
                 return response
 
@@ -395,7 +535,17 @@ class ProviderRegistry:
             "connected_providers": list(self._connected),
             "available_models": self.available_models,
             "health": self.get_health_status(),
+            "cache": self._cache.stats(),
         }
+
+    def get_cache_stats(self) -> dict:
+        """Get LLM response cache statistics."""
+        return self._cache.stats()
+
+    def clear_cache(self) -> None:
+        """Clear the LLM response cache."""
+        self._cache.clear()
+        logger.info("LLM response cache cleared")
 
 
 def get_provider(
